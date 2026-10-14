@@ -2,6 +2,11 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (CI fix)
+
+- CI's `test (ubuntu-latest)` job failed on `main`: `crates/ai-client/src/endpoint.rs` had a Linux-only branch (`XDG_DATA_HOME` / `~/.local/share`) with a type mismatch. Windows never compiles that branch, so local gates couldn't see it. Fixed (convert to `PathBuf` before the fallback) on `ai/fix-linux-endpoint-path`; the expression was checked with `rustc` on Linux.
+- Lesson for receipts: local gates run on Windows only; **a receipt isn't complete until the PR's CI run is green** (Linux + Windows).
+
 ## 2026-10-14: local agent (Codex/GPT-6) - PC-04 wire the AI client into the apps
 
 `photocraft-ai-client` is now a `[workspace.dependencies]` entry and a dependency of `apps/photocraft` and

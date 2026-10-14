@@ -8,7 +8,7 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 
 1. **Claim with a draft PR.** Open a draft PR titled `[<ID>] <feature>` before starting. Open draft PRs are the live "doing" list; this file records what has merged. Don't start an ID that already has an open draft PR.
 2. **Done means all four:** merged to `main`; a receipt in `agents/receipts/<ID>.md`; its tests added to `agents/guards.txt`; reviewed by someone other than the author. **Only the reviewer ticks the box.**
-3. **Receipts come from CI when possible.** Link the GitHub Actions run. An agent's own report of a local run counts, but name the machine and paste the command output summary.
+3. **Receipts come from CI when possible, and CI must be green before merging.** Local gates run on Windows only; CI also builds Linux, which caught a Linux-only error on Oct 14. Link the GitHub Actions run. An agent's own report of a local run counts, but name the machine and paste the command output summary.
 4. **Guards protect what already works.** Before any PR merges, every line in `agents/guards.txt` must pass, plus the `AGENTS.md` §5 gate. A guard that goes red sets that feature to `broken` and unticks it; the PR that broke it fixes it or is reverted.
 5. **Owners follow "local first"** (`TASKS.md` › Routing): the local agent codes, cloud Codex is the fallback, Claude designs the UI rows in §3 and reviews.
 6. **ETA = size + target**, not a date. Size: **S** ≤ half a day of agent work, **M** 1–3 days, **L** a week or more. Target: M1, S1.5, S2, S2b, S3, S4, Later (milestones in `SPEC.md`). Calendar dates come only from Erik, because agents run when their usage limits allow.

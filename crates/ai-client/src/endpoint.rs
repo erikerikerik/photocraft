@@ -125,8 +125,8 @@ fn platform_data_dir() -> Option<PathBuf> {
     {
         std::env::var_os("XDG_DATA_HOME")
             .filter(|value| !value.is_empty())
-            .or_else(|| std::env::var_os("HOME").filter(|value| !value.is_empty()).map(|home| PathBuf::from(home).join(".local").join("share")))
             .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").filter(|value| !value.is_empty()).map(|home| PathBuf::from(home).join(".local").join("share")))
     }
 }
 
