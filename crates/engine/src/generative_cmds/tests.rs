@@ -101,6 +101,30 @@ fn the_result_lands_on_a_new_layer_named_generative_fill_and_the_source_is_untou
     assert!((filled[0] - 0.75).abs() < 0.02, "the provider's grey landed: {filled:?}");
 }
 
+/// B08: the result says where the work ran, taken from the provider's `AiResult` provenance.
+#[test]
+fn the_result_says_which_model_ran_the_fill_and_where() {
+    let mut s = blob_session(8);
+    use_provider(&mut s, FakeProvider::default());
+    let r = s.execute(CMD, json!({})).unwrap();
+    let ai = r["ai"].as_object().unwrap();
+    assert_eq!(ai["model"].as_str().unwrap(), "solid-fill", "the model that ran: {r}");
+    assert_eq!(ai["device"].as_str().unwrap(), "CPU", "the device it ran on: {r}");
+    assert_eq!(ai["provider"].as_str().unwrap(), "local fake", "where it ran: {r}");
+    assert_eq!(ai["elapsedMs"].as_u64().unwrap(), 12, "how long it took: {r}");
+    assert_eq!(ai.len(), 4, "exactly the four provenance fields: {ai:?}");
+    // The background job carries the same provenance, so the control channel and MCP see it too.
+    let mut s = blob_session(8);
+    use_provider(&mut s, FakeProvider::default());
+    let id = match s.start(CMD, json!({})).unwrap() {
+        Started::Job(id) => id,
+        Started::Done(v) => panic!("expected a background job: {v}"),
+    };
+    let job = s.wait_job(id).unwrap();
+    assert_eq!(job["ai"]["model"].as_str().unwrap(), "solid-fill", "{job}");
+    assert_eq!(job["ai"]["provider"].as_str().unwrap(), "local fake", "{job}");
+}
+
 #[test]
 fn one_undo_removes_the_generative_layer() {
     let mut s = blob_session(8);

@@ -6,7 +6,7 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use photocraft_automation::{AuthorizedWorkspace, Headless, PhotocraftMcp, files, security};
+use photocraft_automation::{AuthorizedWorkspace, Backend, Headless, PhotocraftMcp, files, security};
 use photocraft_engine::actions_cmds::Action;
 use photocraft_io::ExportOptions;
 use serde_json::{Value, json};
@@ -234,6 +234,22 @@ fn missing_font_warnings(fonts: Vec<String>) -> Vec<String> {
     fonts.into_iter().map(|font| format!("font '{font}' is not installed; text may render using a fallback face")).collect()
 }
 
+/// Attach PhotoCraft's Craft AI Manager client to a session (PC-04). Every session a real CLI run
+/// creates goes through here: `edit.generativeFill` reaches a running manager, and one that isn't
+/// running says "Craft AI Manager isn't running" rather than failing differently. The client
+/// re-reads the manager's endpoint file for every job, so a manager started later is picked up.
+fn with_ai(mut session: photocraft_engine::Session) -> photocraft_engine::Session {
+    session.set_ai_provider(Some(std::sync::Arc::new(photocraft_ai_client::CaimProvider::new())));
+    session
+}
+
+/// A headless automation session for a real CLI run, with the AI client attached.
+fn headless_with_ai(headless: Headless) -> Headless {
+    let mut h = headless;
+    h.session = with_ai(h.session);
+    h
+}
+
 fn automation_workspace(args: &Args) -> Result<AuthorizedWorkspace, String> {
     AuthorizedWorkspace::new(args.get("--automation-read-root").map(Path::new), args.get("--automation-write-root").map(Path::new))
         .map_err(|error| error.to_string())
@@ -261,7 +277,7 @@ fn info(a: &Args, out: &mut dyn Write) -> R {
     let [file] = a.positional.as_slice() else {
         return Err("info needs <file>".into());
     };
-    let mut h = Headless::trusted_local();
+    let mut h = headless_with_ai(Headless::trusted_local());
     let opened = h.open(Path::new(file)).map_err(|e| e.to_string())?;
     let mut doc = h.inspect(None).map_err(|e| e.to_string())?;
     let mut warnings = opened["warnings"].as_array().cloned().unwrap_or_default();
@@ -297,7 +313,7 @@ fn command_list(a: &Args) -> Result<Vec<(String, Value)>, String> {
 
 fn run_cmds(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
     let opts = export_opts(a)?;
-    let mut h = Headless::trusted_local();
+    let mut h = headless_with_ai(Headless::trusted_local());
     // Opening, running commands and exporting can all notice the same missing font:
     // one `run` invocation reports each warning line at most once.
     let mut reported_fonts = std::collections::HashSet::<String>::new();
@@ -476,7 +492,7 @@ fn batch(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
         let target_text = target.to_string_lossy();
         let r = (|| -> Result<Vec<String>, String> {
             written.check(&target_text)?;
-            let mut h = Headless::trusted_local();
+            let mut h = headless_with_ai(Headless::trusted_local());
             // Steps that play another action find it in the set; the session's playback stack
             // stops an action that calls itself.
             h.session.actions.list = set.clone();
@@ -520,7 +536,7 @@ fn droplet(a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> R {
     if let Some(o) = a.get("--out") {
         p["output"] = json!(o);
     }
-    let mut s = photocraft_engine::Session::new();
+    let mut s = with_ai(photocraft_engine::Session::new());
     let r = s.execute("file.automate.runDroplet", p).map_err(|e| e.to_string())?;
     for f in r["files"].as_array().into_iter().flatten() {
         let _ = writeln!(out, "ok    {}", f.as_str().unwrap_or_default());
@@ -557,7 +573,7 @@ fn commands(a: &Args, out: &mut dyn Write) -> R {
 
 fn serve(a: &Args, err: &mut dyn Write) -> R {
     use std::sync::{Arc, Mutex};
-    let h = Arc::new(Mutex::new(Headless::with_workspace(automation_workspace(a)?)));
+    let h = Arc::new(Mutex::new(headless_with_ai(Headless::with_workspace(automation_workspace(a)?))));
     match a.get("--port") {
         Some(port) => {
             let port: u16 = port.parse().map_err(|_| format!("bad --port `{port}`"))?;
@@ -588,7 +604,11 @@ fn mcp(a: &Args) -> R {
             let token = security::client_token(supplied.as_deref(), token_file.as_deref()).map_err(|e| e.to_string())?;
             PhotocraftMcp::bridge(addr, &token).map_err(|e| e.to_string())?
         }
-        None => PhotocraftMcp::headless_with_workspace(automation_workspace(a)?),
+        None => {
+            let mut h = Headless::with_workspace(automation_workspace(a)?);
+            h.session = with_ai(h.session);
+            PhotocraftMcp::with_backend(Backend::Headless(std::sync::Arc::new(std::sync::Mutex::new(h))))
+        }
     };
     let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().map_err(|e| e.to_string())?;
     rt.block_on(server.serve_stdio()).map_err(|e| e.to_string())

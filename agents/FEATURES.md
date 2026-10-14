@@ -47,7 +47,7 @@ Rules every capability must pass. A capability isn't done until each rule that a
 | [x] | B05 | **Never crashes:** any params or document state gives an error, never a panic | `cargo test -p photocraft-engine --test panic_hunt -- --ignored` | M1 | done (PC-02) |
 | [ ] | B06 | **Every action is a command**, drivable over MCP and the control channel | Automation test | M1 | todo |
 | [ ] | B07 | **Offline after first use:** models SHA-256 checked, unknown files refused, ONNX / safetensors only | Manager tests | M1 | todo |
-| [ ] | B08 | **Says where it ran:** model, device, local or cloud, time taken | Result JSON test; shown by U04 | M1 | todo |
+| [x] | B08 | **Says where it ran:** model, device, local or cloud, time taken | Result JSON test; shown by U04 | M1 | done (PC-04) |
 | [ ] | B09 | **Nothing leaves the PC without consent:** web jobs show "uploads to X" first | Manager test + manual | S4 | todo |
 | [x] | B10 | **Colour:** RGB at 8/16/32-bit; Gray, CMYK, Lab and indexed give a clear "not supported yet" | Engine test at three bit depths | M1 | done (PC-02) |
 | [x] | B11 | **Soft selections respected:** blended by selection coverage; pixels outside the selection identical | Golden test | M1 | done (PC-02) |
@@ -99,6 +99,7 @@ Every UI row also passes U10.
 
 | Date | Change |
 |---|---|
+| 2026-10-14 | B08 ticked (PC-04, reviewed by Claude) |
 | 2026-10-14 | Added AI-C13 (C2PA), AI-C14 (agent workflows), B16–B18, CAIM-11–13 from the upstream check, ChatGPT review and RedLamp research (`agents/RESEARCH.md`) |
 | 2026-10-13 | B01, B02, B03, B05, B10, B11, B15 ticked (PC-02, reviewed by Claude) |
 | 2026-10-13 | Owners switched to "local first"; Claude owns UI design |

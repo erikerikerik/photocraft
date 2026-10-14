@@ -34,6 +34,8 @@ photocraft-automation = { path = "crates/automation" }
 photocraft-plugins = { path = "crates/plugins" }
 photocraft-engine = { path = "crates/engine" }
 photocraft-ui-egui = { path = "crates/ui-egui" }
+# Craft AI Manager client (native only: not in the web build, and outside the wasm set).
+photocraft-ai-client = { path = "crates/ai-client" }
 photocraft-testkit = { path = "crates/testkit" }
 photocraft-tablet = { path = "crates/tablet" }
 

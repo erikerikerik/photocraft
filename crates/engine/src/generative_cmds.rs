@@ -6,7 +6,7 @@
 use std::time::Duration;
 
 use photocraft_color::ColorMode;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::ai::{self, AiError, AiRequest, AiTask};
 use crate::commands::CommandSpec;
@@ -21,6 +21,12 @@ const POLL_EVERY: Duration = Duration::from_millis(100);
 
 fn bad(msg: impl Into<String>) -> EngineError {
     EngineError::BadParams { cmd: CMD.into(), msg: msg.into() }
+}
+
+/// Where a fill ran (FEATURES B08): the model, device and provider the job reported, and how long
+/// it took. The engine passes them through as the provider said them.
+fn provenance(result: &ai::AiResult) -> Value {
+    json!({"model": result.model, "device": result.device, "provider": result.provider, "elapsedMs": result.elapsed_ms})
 }
 
 fn run(s: &mut Session, p: &Value) -> Result<Value> {
@@ -87,11 +93,18 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
                 return Err(EngineError::Other("The AI result contains invalid pixel values; the document is unchanged".into()));
             }
             ctx.progress(1.0, LABEL);
-            Ok(FilledWindow { filled: result.pixels, bounds, original, cover, n_hole })
+            let ai = provenance(&result);
+            Ok((FilledWindow { filled: result.pixels, bounds, original, cover, n_hole }, ai))
         },
-        move |s, done| {
+        move |s, (done, ai)| {
             let name = s.active().map_or_else(|| LABEL.to_string(), |st| edit_menu_cmds::fill_layer_name(&st.doc, LABEL));
-            edit_menu_cmds::apply_content_aware_fill(s, LABEL, id, "new", fmt, window, done, &name)
+            let mut result = edit_menu_cmds::apply_content_aware_fill(s, LABEL, id, "new", fmt, window, done, &name)?;
+            // The provenance travels with the result, so a "Generative Fill" layer can be traced
+            // to the model that made it (B08; U04 shows it on the layer).
+            if let Some(fields) = result.as_object_mut() {
+                fields.insert("ai".to_string(), ai);
+            }
+            Ok(result)
         },
     )
 }
@@ -102,7 +115,7 @@ pub fn specs() -> Vec<CommandSpec> {
         label: "Generative Fill…",
         menu: &["Edit"],
         shortcut: None,
-        params: r##"{"prompt":string?,"sampleAllLayers":bool=false} … {layer,filled,window} (fills the selection through the AI provider onto a new "Generative Fill" layer)"##,
+        params: r##"{"prompt":string?,"sampleAllLayers":bool=false} … {layer,filled,window,ai:{model,device,provider,elapsedMs}} (fills the selection through the AI provider onto a new "Generative Fill" layer; ai says where the work ran)"##,
         enabled: edit_menu_cmds::can_fill,
         run,
         journal: true,
