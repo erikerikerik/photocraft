@@ -2,6 +2,11 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (less hand work for Erik)
+
+- New `agents/tools/run-task.ps1 <task>`: refuses if either repo has uncommitted changes, switches both to an up-to-date `main`, then starts Codex on `agents/prompts/local-<task>.md` (`-Exec` for unattended with a log in `E:\CraftML\work\logs`).
+- Reports: Erik no longer pastes them. He tells Claude "<task> done"; Claude reads the receipt and the branches from GitHub.
+
 ## 2026-10-14: Claude (MG-02 review and merge, MG-04 prompt)
 
 - MG-02 approved and merged (CAIM `main` + `ai/mg-02-status` here). CAIM-11, B14, B17 ticked; CAIM-03's M1 part done. LaMa is downloaded and verified on CraftML.
