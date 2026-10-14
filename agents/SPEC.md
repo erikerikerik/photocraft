@@ -243,7 +243,7 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
     | Select subject / object | **SAM 2.1** (Apache-2.0) | First choice. MobileSAM dropped (licence unclear). |
     | Remove background | BiRefNet | Verify the specific checkpoint's training data. RMBG excluded. |
     | Upscale | none clean yet | Real-ESRGAN removed (DIV2K research-only data). |
-    | Generative fill (S3) | FLUX.2 [klein] 4B | Apache-2.0 weights per RedLamp; training data undisclosed; verify before use. |
+    | Generative fill (S3) | FLUX.2 [klein] 4B | **Erik's preferred S3 model.** Apache-2.0 weights per RedLamp; training data undisclosed; verify before use. |
 14. **Craft AI Manager runtime patterns (Oct 14; RedLamp ideas, no RedLamp code).**
     - **Model manifest + licence gate:** every catalog entry has id, version, SHA-256, size, URL, licence of code / weights / training data, and a provenance note. A CI script fails on a missing manifest, an `UNCLEAR` field, or a denylisted licence (GPL, LGPL, AGPL, NC, OpenRAIL, research-only) unless the entry carries an explicit Erik override with a reason (as LaMa does). The same data drives the licence screen in the manager.
     - **Acknowledgment for flagged models:** a model with an override shows its note and needs one click of acknowledgment before its first download.
