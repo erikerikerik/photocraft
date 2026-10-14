@@ -81,7 +81,7 @@ Every UI row also passes U10.
 
 | ✓ | ID | Feature | Target | Size | Owner | Blockers | Status | Receipt |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | CAIM-01 | Loopback server with a token, `endpoint.json`, job API | M1 | M | local | | todo | |
+| [x] | CAIM-01 | Loopback server with a token, `endpoint.json`, job API | M1 | M | local | | done (MG-01) | CAIM `agents/receipts/MG-01.md` |
 | [ ] | CAIM-02 | Model list: name, task, size, licence, installed or not, download / delete | S2 | M | | CAIM-01 | todo | |
 | [ ] | CAIM-03 | Downloads with progress, SHA-256 check and resume (M1: basic download and check) | M1 / S2 | M | local | | todo | |
 | [ ] | CAIM-04 | Device setting per task (Auto / CUDA / CPU); shows the GPU and free VRAM | S2b | M | | CAIM-02 | todo | |

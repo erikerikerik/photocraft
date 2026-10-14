@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (MG-01 review and merge)
+
+- MG-01 approved and merged into `craft-ai-manager` `main` (plus `ai/mg-01-status` here). Re-ran fmt / clippy / tests on Linux; read the auth, Host, limits and endpoint-file code. CAIM-01 ticked.
+- One follow-up: `endpoint.json` should be mode 0600 on Linux/macOS (Windows is fine). Folded into MG-02 as step 0.
+- **Next:** MG-02 (prompt `agents/prompts/local-mg-02.md`: catalog + licence gate + verified download of LaMa), then MG-04 (ONNX runner), then PC-06 (real fill end to end). PC-05 can run in parallel.
+
 ## 2026-10-14: Claude (CI fix)
 
 - CI's `test (ubuntu-latest)` job failed on `main`: `crates/ai-client/src/endpoint.rs` had a Linux-only branch (`XDG_DATA_HOME` / `~/.local/share`) with a type mismatch. Windows never compiles that branch, so local gates couldn't see it. Fixed (convert to `PathBuf` before the fallback) on `ai/fix-linux-endpoint-path`; the expression was checked with `rustc` on Linux.
