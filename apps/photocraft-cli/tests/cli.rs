@@ -748,3 +748,41 @@ fn batch_plays_a_photoshop_actions_file() {
     assert!(err.contains("Generative Fill"), "{err}");
     assert!(!o.status.success());
 }
+
+/// B04 (PC-04): every CLI session carries the Craft AI Manager client, so Generative Fill on a
+/// machine with no manager is one plain sentence and a normal failure exit, not a crash. The
+/// endpoint variable is set only for the child process, so other tests keep their environment.
+#[test]
+fn generative_fill_without_a_manager_says_the_manager_is_not_running() {
+    let d = tmp("no-manager");
+    let missing = d.join("no-such-endpoint.json");
+    let o = bin()
+        .current_dir(&d)
+        .env("CRAFT_AI_ENDPOINT", &missing)
+        .args([
+            "run",
+            "--new",
+            r#"{"width":32,"height":24,"mode":"rgb","depth":8,"background":"white"}"#,
+            "--cmd",
+            "select.rect",
+            "--params",
+            r#"{"x":8,"y":6,"width":12,"height":10}"#,
+            "--cmd",
+            "edit.generativeFill",
+            "--params",
+            "{}",
+        ])
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let (out, err) = (String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned());
+    assert_eq!(o.status.code(), Some(1), "a failed command exits 1, not a crash\nstdout: {out}\nstderr: {err}");
+    assert!(!err.contains("panicked"), "the CLI stayed alive: {err}");
+    assert_eq!(
+        err.lines().last().unwrap_or_default(),
+        "error: `edit.generativeFill`: Craft AI Manager isn't running",
+        "the message names the manager, exactly\nstdout: {out}\nstderr: {err}",
+    );
+    assert!(out.contains("\"select.rect\""), "the commands before it ran: {out}");
+    assert!(!out.contains("generativeFill"), "a failed command prints no result: {out}");
+}

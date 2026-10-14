@@ -55,6 +55,15 @@ mod window_frame;
 use photocraft_engine::Session;
 use photocraft_ui_egui::PhotocraftApp;
 
+/// The session the app starts with: PhotoCraft's Craft AI Manager client attached, so an AI command
+/// reaches a running manager and one that isn't running says "Craft AI Manager isn't running"
+/// rather than failing differently (PC-04). The client re-reads the manager's endpoint file for
+/// every job, so a manager started after the app is still picked up.
+fn with_ai(mut session: Session) -> Session {
+    session.set_ai_provider(Some(std::sync::Arc::new(photocraft_ai_client::CaimProvider::new())));
+    session
+}
+
 /// Matches the `.desktop` file and hicolor icon name, so Wayland docks pick up the icon.
 const APP_ID: &str = "ai.storyteller.photocraft";
 
@@ -389,7 +398,7 @@ fn main() -> eframe::Result {
                         services::xwayland_command(var("FLATPAK_ID").as_deref(), var("APPIMAGE").as_deref(), std::env::var_os("DISPLAY").is_some());
                 }
             }
-            let mut app = PhotocraftApp::new(Session::new(), services);
+            let mut app = PhotocraftApp::new(with_ai(Session::new()), services);
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.custom_titlebar = custom_titlebar;
             // Only the title bar's free gap drags the window, never the menus (mac_window.rs).
