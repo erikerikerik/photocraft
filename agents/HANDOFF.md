@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (upstream check, outside reviews)
+
+- Upstream is 46 commits ahead with **Release 0.9.0**; no AI work there; a trial merge into our `main` is clean. New task **SY-01** syncs it (prompt `agents/prompts/local-sy-01.md`).
+- Read ChatGPT's review and checked RedLamp. Findings and what we changed: `agents/RESEARCH.md`. Main changes: SPEC amendments 12 (sync + PRs always target the fork), 13 (candidate models revised; training data counts), 14 (CAIM patterns: licence gate, model pinning, tiles, priority lanes); FEATURES AI-C13, AI-C14, B16–B18, CAIM-11–13; decisions D6 (optional perf investigation for upstream) and D7 (LaMa replacement before a public CAIM release).
+- **Next:** SY-01, then PC-04 (prompt `agents/prompts/local-pc-04.md`), then MG-00 (create `craft-ai-manager`).
+
 ## 2026-10-13 (end of day): Claude
 
 **Done today:** PC-00, MG-03, PC-01, PC-02, PC-03, all reviewed. PhotoCraft now has Edit › Generative Fill and a tested client for Craft AI Manager; nothing on the manager side exists yet.

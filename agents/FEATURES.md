@@ -31,6 +31,8 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 | [ ] | AI-C10 | AI denoise | Camera Raw › Denoise | Later | M | | CAIM-02 | todo | |
 | [ ] | AI-C11 | Find distractions (wires, people) and turn them into a selection | Remove tool › Find distractions | Later | M | | AI-C02 | todo | |
 | [ ] | AI-C12 | Web providers with your own API key | Firefly (cloud) | S4 | L | | CAIM-08, B09 | todo | |
+| [ ] | AI-C13 | Content Credentials (C2PA): AI-made layers and exports carry a "made with AI" record (`c2pa-rs`, MIT/Apache). PhotoCraft's roadmap lists C2PA under M11 | Content Credentials | S3 | M | | AI-C07 | todo | |
+| [ ] | AI-C14 | Agent workflows: an agent combines AI tools over MCP (e.g. "remove the wires in every photo in this folder, new layer each, save as PSD"); the AI commands already work over MCP (B06), this adds tested end-to-end recipes | Actions / batch | S2 | M | | B06, PC-04 | todo | |
 
 ## 2. How it behaves
 
@@ -51,8 +53,11 @@ Rules every capability must pass. A capability isn't done until each rule that a
 | [x] | B11 | **Soft selections respected:** blended by selection coverage; pixels outside the selection identical | Golden test | M1 | done (PC-02) |
 | [ ] | B12 | **Big images:** a 24–36 MP document works (only the window around the selection is sent); time recorded | Timing in the receipt | M1 | todo |
 | [ ] | B13 | **GPU optional:** Auto picks CUDA, then DirectML, then CPU; any GPU failure or low VRAM falls back to the CPU | Manager tests on the 4090 | S2b | todo |
-| [ ] | B14 | **Licences:** each model's licence recorded and shown; commercial-safe only | Catalog test | M1 | todo |
+| [ ] | B14 | **Licences:** each model's licence recorded and shown; commercial-safe only (see B17 for training data) | Catalog test | M1 | todo |
 | [x] | B15 | **Web build unaffected:** wasm still compiles; AI commands report "not available" there | `cargo xtask wasm` | M1 | done (PC-02) |
+| [ ] | B16 | **Model pinned:** every AI layer records the model id, version and SHA-256 that made it; a model update never changes existing layers | Engine test: layer metadata after a fill; CAIM test: result carries them | S2 | todo |
+| [ ] | B17 | **Training data counts:** a model is commercial-safe only if its code, weights and training data are; anything else needs Erik's recorded override and a user acknowledgment before download | CAIM licence-gate test (CAIM-11) | M1 | todo |
+| [ ] | B18 | **Interactive AI stays live:** a newer interactive request replaces a queued one (latest-wins), and batch work yields to interactive work | CAIM scheduler tests (CAIM-12) | S2 | todo |
 
 ## 3. How it looks
 
@@ -63,7 +68,7 @@ Every UI row also passes U10.
 | [ ] | U01 | Edit › Generative Fill… menu item, enabled when there's a selection | M1 | S | local (Claude designs) | | todo | |
 | [ ] | U02 | Generative Fill runs straight away in M1 (no prompt). From S3: a small prompt bar under the selection (prompt field, Generate, Cancel); empty prompt = remove | M1 / S3 | S / M | | AI-C07 | todo | |
 | [ ] | U03 | Progress and Cancel in the existing jobs UI (`crates/ui-egui/src/jobs_ui.rs`) | M1 | S | local (Claude designs) | AI-C01 | todo | |
-| [ ] | U04 | Result layer named "Generative Fill"; Properties panel shows prompt, model, device and time | S2 | M | | AI-C01 | todo | |
+| [ ] | U04 | Result layer named "Generative Fill"; Properties panel shows prompt, model (name, version), device and time (B16) | S2 | M | | AI-C01 | todo | |
 | [ ] | U05 | Variations: ‹ 1 / 3 › with thumbnails in Properties | S3 | M | | AI-C07 | todo | |
 | [ ] | U06 | Contextual Task Bar under a selection (Generative Fill, Select Subject, Remove Background). PhotoCraft has none yet (`docs/ui-parity.md` lists it missing), so this is a general feature worth offering upstream on its own | S2 | L | | D4 | todo | |
 | [ ] | U07 | Remove tool options bar: "Generative AI: Off / Auto / On" | S1.5 | S | | AI-C02 | todo | |
@@ -86,11 +91,15 @@ Every UI row also passes U10.
 | [ ] | CAIM-08 | API keys in Windows Credential Manager / macOS Keychain | S4 | M | | CAIM-02 | todo | |
 | [ ] | CAIM-09 | Tray icon, optional start with Windows | S2 | S | | D5 | todo | |
 | [ ] | CAIM-10 | Activity log: recent jobs, where they ran, timings | S2 | S | | CAIM-01 | todo | |
+| [ ] | CAIM-11 | Model manifest + licence gate: manifest per model (code / weights / training-data licences, provenance, SHA-256); CI fails on missing, `UNCLEAR` or denylisted entries without an override; flagged models need one acknowledgment before download (SPEC amendment 14) | M1 | M | local | | todo | |
+| [ ] | CAIM-12 | Priority lanes + latest-wins: interactive > user job > batch, newest interactive request replaces a queued one, batch pauses for interactive work | S2 | M | | CAIM-01 | todo | |
+| [ ] | CAIM-13 | Tiled runner: 512² tiles (256² fallback), feathered seams, cancel between tiles | S2 | M | | CAIM-01 | todo | |
 
 ## Revision history
 
 | Date | Change |
 |---|---|
+| 2026-10-14 | Added AI-C13 (C2PA), AI-C14 (agent workflows), B16–B18, CAIM-11–13 from the upstream check, ChatGPT review and RedLamp research (`agents/RESEARCH.md`) |
 | 2026-10-13 | B01, B02, B03, B05, B10, B11, B15 ticked (PC-02, reviewed by Claude) |
 | 2026-10-13 | Owners switched to "local first"; Claude owns UI design |
 | 2026-10-13 | D1 (Photoshop names) and D2 (accept big-lama for now) decided; blockers cleared |

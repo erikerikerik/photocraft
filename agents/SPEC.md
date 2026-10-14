@@ -193,7 +193,7 @@ Excluded by the commercial-safe rule: RMBG (non-commercial), FLUX.1-dev (non-com
 - **Shared files:** each repo has `agents/` with SPEC.md (this file), TASKS.md and HANDOFF.md.
 - **TASKS.md:** one line per task, with status, owner and the test command that must pass.
 - **HANDOFF.md:** where the last agent stopped and what's next. It's updated at the end of every session.
-- **Branches:** one per task (`ai/<task>`). Nothing merges without passing tests and a review by Claude or Codex.
+- **Branches:** one per task (`ai/<task>`). Nothing merges without passing tests and a review by Claude or Codex. PRs always target `erikerikerik/photocraft` (amendment 12).
 - **Local agent (Strata):** good for tests, ONNX conversion and benchmark scripts, docs, and small well-specified changes. Not for architecture or cross-crate changes.
 - **Before touching PhotoCraft:** read its `AGENTS.md`, `docs/architecture.md`, `docs/roadmap.md`, `docs/plugins.md` and `docs/control-protocol.md`.
 
@@ -235,3 +235,19 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
     - `GET /v1/jobs/{id}/result.png` → 200 `image/png`: same size, bit depth and channels as the `image` part. Pixels outside the mask equal the input.
     - `DELETE /v1/jobs/{id}` → 204 (also for a job that already finished).
     - **Client limits:** connect timeout 2 s, read timeout 30 s per request, JSON bodies ≤ 64 KiB, PNG bodies ≤ 1 GiB and ≤ the request's pixel count; anything else is an error, never a panic.
+12. **Upstream sync and pull-request target (Oct 14).** Upstream moves fast (46 commits and Release 0.9.0 in a day) and never touches our files except shared catalogs, so: merge `upstream/main` into the fork through a PR at least weekly and before each milestone (task SY-01), running all guards plus `panic_hunt`. **Every agent PR targets `erikerikerik/photocraft` `main`.** Never use the `pull/new/<branch>` link Git prints: on a fork it opens the PR against storytold (it happened once, Oct 13; closed). Use `gh pr create --repo erikerikerik/photocraft --base main`, or `https://github.com/erikerikerik/photocraft/compare/main...<branch>?expand=1`.
+13. **Candidate models, revised (Oct 14, from RedLamp's licence research; details in `agents/RESEARCH.md`).** The rule now covers **training data**, not just code and weights: a model whose weights are permissive but whose training data is non-commercial or research-only is not "commercial-safe".
+    | Task | Candidate | Status |
+    |---|---|---|
+    | Fill masked area | LaMa (big-lama) ONNX | **Accepted for M1 and personal use only** (D2): trained on Places2 (non-commercial). Needs a clean replacement before any public CAIM release (D7). |
+    | Select subject / object | **SAM 2.1** (Apache-2.0) | First choice. MobileSAM dropped (licence unclear). |
+    | Remove background | BiRefNet | Verify the specific checkpoint's training data. RMBG excluded. |
+    | Upscale | none clean yet | Real-ESRGAN removed (DIV2K research-only data). |
+    | Generative fill (S3) | FLUX.2 [klein] 4B | Apache-2.0 weights per RedLamp; training data undisclosed; verify before use. |
+14. **Craft AI Manager runtime patterns (Oct 14; RedLamp ideas, no RedLamp code).**
+    - **Model manifest + licence gate:** every catalog entry has id, version, SHA-256, size, URL, licence of code / weights / training data, and a provenance note. A CI script fails on a missing manifest, an `UNCLEAR` field, or a denylisted licence (GPL, LGPL, AGPL, NC, OpenRAIL, research-only) unless the entry carries an explicit Erik override with a reason (as LaMa does). The same data drives the licence screen in the manager.
+    - **Acknowledgment for flagged models:** a model with an override shows its note and needs one click of acknowledgment before its first download.
+    - **Model pinned in results:** `AiResult` provenance includes the model id, version and SHA-256; PhotoCraft stores it with the layer it created (U04), so an AI layer always says what made it. A new model version never changes existing layers.
+    - **Tiled runner:** large work runs in 512² tiles (256² fallback) with feathered seams, checking cancellation between tiles. LaMa's single 512² window (M1) is the first case.
+    - **Priority lanes and latest-wins:** interactive requests (S2 hover select) > user jobs > batch; batch pauses while interactive work is waiting; a newer interactive request for the same preview replaces the queued one. One GPU job at a time, with the VRAM check from step 2.b.
+    - **Evaluation gate:** a model update must not regress on the golden set (MG-04's test images) beyond a set tolerance.
