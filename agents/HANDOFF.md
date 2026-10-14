@@ -2,6 +2,42 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: local agent (Codex/GPT-6) - PC-04 wire the AI client into the apps
+
+`photocraft-ai-client` is now a `[workspace.dependencies]` entry and a dependency of `apps/photocraft` and
+`apps/photocraft-cli` only - not `photocraft-web`, and not any L0-L6 crate (layers shows it at L6, both apps exempt;
+`cargo xtask wasm` does not build it). One helper per app: `with_ai(Session)` in `apps/photocraft/src/main.rs` (the
+one real session) and `with_ai` + `headless_with_ai(Headless)` in `apps/photocraft-cli/src/lib.rs`, used by `info`,
+`run`, `batch`, `droplet`, `serve` and `mcp`. The CLI's `mcp` path builds its own `Headless` and passes it to
+`PhotocraftMcp::with_backend(Backend::Headless(..))` (identical to `headless_with_workspace`) so `photocraft-automation`
+stays free of the client. Test sessions keep no provider.
+
+B08: `edit.generativeFill` carries the `AiResult` provenance from the job's work step to its apply step and returns
+`{layer, filled, window, ai: {model, device, provider, elapsedMs}}`; the params doc string was updated and the same
+fields come back from `Session::start` + `wait_job`. New engine test
+`the_result_says_which_model_ran_the_fill_and_where`. B04: new CLI test
+`generative_fill_without_a_manager_says_the_manager_is_not_running` (child-only `CRAFT_AI_ENDPOINT` at a missing file;
+exact sentence, exit 1, no crash). Guard line `PC-04 | photocraft | cargo test -p photocraft-cli` added.
+
+Gate, all green with `CARGO_TARGET_DIR=target/agent-local` (warm): build 2.9 s; `--lib generative` 14/0/0;
+`cargo test -p photocraft-cli` 29/0/0 in `tests/cli.rs`; clippy `-p photocraft -p photocraft-cli -p photocraft-engine
+--all-targets -D warnings` exit 0 (59 s cold); layers 30 crates; wasm ok (109 s cold); `panic_hunt -- --ignored` pass;
+BASE `--lib --tests` 1642 passed / 13 ignored / 54 binaries; PC-01 `ai::tests` 14/0/0; PC-03 `photocraft-ai-client`
+24/0/0. Nothing failed.
+
+Manual check ran (CraftML console session): `photocraft.exe --control 7878`, no manager installed, `file.new` +
+`select.rect` + `engine.execute edit.generativeFill` -> `{"ok": false, "error": "Craft AI Manager isn't running"}`;
+`ui.inspect` then showed the notice "Generative Fill: Craft AI Manager isn't running", `statusError: true`, frame 87,
+127 fps, document intact. Screenshot `log/pc04-manual.png` (gitignored).
+
+Worktree `E:CraftMLworkwtpc-04`, branch `ai/pc-04-wire-client`, base `origin/main` `179ef8df`. Receipt:
+`agents/receipts/PC-04.md`. Status is `review`; PC-04 guard added. Not merged; `main` untouched. PR not opened: `gh`
+is still not installed on CraftML (CN-00), so Erik opens
+`https://github.com/erikerikerik/photocraft/compare/main...ai/pc-04-wire-client?expand=1`.
+
+**Next:** PC-05 (MCP `command_run`/`jobs_cancel` with `FakeProvider`), then MG-00/MG-01 so PC-06 can do a real fill.
+Still open: B04's "way to open it" (needs the manager + U09), B08's layer display (U04), no `/v1/health` probe.
+
 ## 2026-10-14: local agent (Codex/GPT-6) - SY-01 upstream sync
 
 Merged `upstream/main` at `c699e3cd` ("Release 0.9.0") into `sync/upstream-2026-10-14`, branched from `origin/main` `a403a1c9`: **46 upstream commits, 110 files, no conflicts** (merge commit `fb0d2834`; a merge, not a rebase). Upstream touched none of our files (`agents/`, `crates/ai-client/`, `crates/engine/src/ai*.rs`, `generative_cmds*`); the shared files it did change (`engine/src/commands.rs`, the 20 i18n catalogs, `Cargo.lock`) merged cleanly. Kept our parity `FLOOR` 632 (upstream still 631) and our "Generative Fill..." rows alongside upstream's new print rows in every catalog. One follow-up commit: `Cargo.lock` now records `photocraft-ai-client` 0.8.2 -> 0.9.0 (Cargo did it on the first build; upstream's release bumped the workspace version). `cargo xtask parity` is still 632/632, so `docs/parity-checklist.md` did not change.

@@ -15,3 +15,5 @@ PC-01 | photocraft | cargo test -p photocraft-engine --lib ai::tests
 PC-02 | photocraft | cargo test -p photocraft-engine --lib generative
 # PC-03 Craft AI Manager client: endpoint file, loopback HTTP framing, size caps, protocol tests.
 PC-03 | photocraft | cargo test -p photocraft-ai-client
+# PC-04 the client is wired into the apps: no manager -> one plain sentence, exit 1, no crash.
+PC-04 | photocraft | cargo test -p photocraft-cli
