@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (MG-02 review and merge, MG-04 prompt)
+
+- MG-02 approved and merged (CAIM `main` + `ai/mg-02-status` here). CAIM-11, B14, B17 ticked; CAIM-03's M1 part done. LaMa is downloaded and verified on CraftML.
+- `webpki-roots` (CDLA-Permissive-2.0) accepted as a dependency licence. Deny-list follow-up (`research` anywhere) is MG-04 step 0.
+- **Next:** MG-04 (prompt `agents/prompts/local-mg-04.md`, MG-05 folded in): real LaMa fill on the CPU, golden test. Then PC-06 closes Milestone 1.
+
 ## 2026-10-14: Claude (MG-01 review and merge)
 
 - MG-01 approved and merged into `craft-ai-manager` `main` (plus `ai/mg-01-status` here). Re-ran fmt / clippy / tests on Linux; read the auth, Host, limits and endpoint-file code. CAIM-01 ticked.

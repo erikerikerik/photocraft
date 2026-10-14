@@ -53,10 +53,10 @@ Rules every capability must pass. A capability isn't done until each rule that a
 | [x] | B11 | **Soft selections respected:** blended by selection coverage; pixels outside the selection identical | Golden test | M1 | done (PC-02) |
 | [ ] | B12 | **Big images:** a 24–36 MP document works (only the window around the selection is sent); time recorded | Timing in the receipt | M1 | todo |
 | [ ] | B13 | **GPU optional:** Auto picks CUDA, then DirectML, then CPU; any GPU failure or low VRAM falls back to the CPU | Manager tests on the 4090 | S2b | todo |
-| [ ] | B14 | **Licences:** each model's licence recorded and shown; commercial-safe only (see B17 for training data) | Catalog test | M1 | todo |
+| [x] | B14 | **Licences:** each model's licence recorded and shown; commercial-safe only (see B17 for training data) | Catalog test | M1 | done (MG-02) |
 | [x] | B15 | **Web build unaffected:** wasm still compiles; AI commands report "not available" there | `cargo xtask wasm` | M1 | done (PC-02) |
 | [ ] | B16 | **Model pinned:** every AI layer records the model id, version and SHA-256 that made it; a model update never changes existing layers | Engine test: layer metadata after a fill; CAIM test: result carries them | S2 | todo |
-| [ ] | B17 | **Training data counts:** a model is commercial-safe only if its code, weights and training data are; anything else needs Erik's recorded override and a user acknowledgment before download | CAIM licence-gate test (CAIM-11) | M1 | todo |
+| [x] | B17 | **Training data counts:** a model is commercial-safe only if its code, weights and training data are; anything else needs Erik's recorded override and a user acknowledgment before download | CAIM licence-gate test (CAIM-11) | M1 | done (MG-02) |
 | [ ] | B18 | **Interactive AI stays live:** a newer interactive request replaces a queued one (latest-wins), and batch work yields to interactive work | CAIM scheduler tests (CAIM-12) | S2 | todo |
 
 ## 3. How it looks
@@ -83,7 +83,7 @@ Every UI row also passes U10.
 |---|---|---|---|---|---|---|---|---|
 | [x] | CAIM-01 | Loopback server with a token, `endpoint.json`, job API | M1 | M | local | | done (MG-01) | CAIM `agents/receipts/MG-01.md` |
 | [ ] | CAIM-02 | Model list: name, task, size, licence, installed or not, download / delete | S2 | M | | CAIM-01 | todo | |
-| [ ] | CAIM-03 | Downloads with progress, SHA-256 check and resume (M1: basic download and check) | M1 / S2 | M | local | | todo | |
+| [ ] | CAIM-03 | Downloads with progress, SHA-256 check and resume (M1: basic download and check) | M1 / S2 | M | local | | M1 part done (MG-02); resume is S2 | CAIM `agents/receipts/MG-02.md` |
 | [ ] | CAIM-04 | Device setting per task (Auto / CUDA / CPU); shows the GPU and free VRAM | S2b | M | | CAIM-02 | todo | |
 | [ ] | CAIM-05 | Disk usage and model folder location | S2 | S | | CAIM-02 | todo | |
 | [ ] | CAIM-06 | Update check for the catalog and the app | S2 | S | | CAIM-02 | todo | |
@@ -91,7 +91,7 @@ Every UI row also passes U10.
 | [ ] | CAIM-08 | API keys in Windows Credential Manager / macOS Keychain | S4 | M | | CAIM-02 | todo | |
 | [ ] | CAIM-09 | Tray icon, optional start with Windows | S2 | S | | D5 | todo | |
 | [ ] | CAIM-10 | Activity log: recent jobs, where they ran, timings | S2 | S | | CAIM-01 | todo | |
-| [ ] | CAIM-11 | Model manifest + licence gate: manifest per model (code / weights / training-data licences, provenance, SHA-256); CI fails on missing, `UNCLEAR` or denylisted entries without an override; flagged models need one acknowledgment before download (SPEC amendment 14) | M1 | M | local | | todo | |
+| [x] | CAIM-11 | Model manifest + licence gate: manifest per model (code / weights / training-data licences, provenance, SHA-256); CI fails on missing, `UNCLEAR` or denylisted entries without an override; flagged models need one acknowledgment before download (SPEC amendment 14) | M1 | M | local | | done (MG-02) | CAIM `agents/receipts/MG-02.md` |
 | [ ] | CAIM-12 | Priority lanes + latest-wins: interactive > user job > batch, newest interactive request replaces a queued one, batch pauses for interactive work | S2 | M | | CAIM-01 | todo | |
 | [ ] | CAIM-13 | Tiled runner: 512² tiles (256² fallback), feathered seams, cancel between tiles | S2 | M | | CAIM-01 | todo | |
 
