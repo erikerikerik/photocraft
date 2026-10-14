@@ -2,6 +2,14 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: local agent (Codex/GPT-6) - SY-01 upstream sync
+
+Merged `upstream/main` at `c699e3cd` ("Release 0.9.0") into `sync/upstream-2026-10-14`, branched from `origin/main` `a403a1c9`: **46 upstream commits, 110 files, no conflicts** (merge commit `fb0d2834`; a merge, not a rebase). Upstream touched none of our files (`agents/`, `crates/ai-client/`, `crates/engine/src/ai*.rs`, `generative_cmds*`); the shared files it did change (`engine/src/commands.rs`, the 20 i18n catalogs, `Cargo.lock`) merged cleanly. Kept our parity `FLOOR` 632 (upstream still 631) and our "Generative Fill..." rows alongside upstream's new print rows in every catalog. One follow-up commit: `Cargo.lock` now records `photocraft-ai-client` 0.8.2 -> 0.9.0 (Cargo did it on the first build; upstream's release bumped the workspace version). `cargo xtask parity` is still 632/632, so `docs/parity-checklist.md` did not change.
+
+Gate, all green with `CARGO_TARGET_DIR=target/agent-local`: `cargo xtask layers` 30 crates; `cargo build -p photocraft -p photocraft-cli` 137 s (new upstream deps fetched: `winprint`, `craft-print`, `reqwest`/rustls, `aws-lc-sys`); `cargo test -p photocraft-engine --lib --tests` 1641 lib passed / 0 failed / 13 ignored plus 54 integration binaries; PC-01 `ai::tests` 14/0/0; PC-02 `generative` 13/0/0; PC-03 `photocraft-ai-client` 24/0/0; `panic_hunt -- --ignored` pass (now with upstream's panic-hook counting from `c0cb7809`); `cargo xtask wasm` all ok (147 s); `cargo xtask parity` 632/632. Nothing failed, so there is no upstream-only failure to record. Clippy is not part of SY-01's gate and no source of ours changed.
+
+PR: `sync/upstream-2026-10-14` -> `erikerikerik/photocraft` `main`. Next sync due **2026-10-21**; then PC-04 (`agents/prompts/local-pc-04.md`).
+
 ## 2026-10-14: Claude (upstream check, outside reviews)
 
 - Upstream is 46 commits ahead with **Release 0.9.0**; no AI work there; a trial merge into our `main` is clean. New task **SY-01** syncs it (prompt `agents/prompts/local-sy-01.md`).
