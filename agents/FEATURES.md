@@ -7,7 +7,7 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 ## Rules
 
 1. **Claim with a draft PR.** Open a draft PR titled `[<ID>] <feature>` before starting. Open draft PRs are the live "doing" list; this file records what has merged. Don't start an ID that already has an open draft PR.
-2. **Done means all four:** merged to `main`; a receipt in `agents/receipts/<ID>.md`; its tests added to `agents/guards.txt`; reviewed by someone other than the author. **Only the reviewer ticks the box.**
+2. **Done means all four:** merged to `main` (by Erik, or by Claude under SPEC amendment 15); a receipt in `agents/receipts/<ID>.md`; its tests added to `agents/guards.txt`; reviewed by someone other than the author. **Only the reviewer ticks the box.**
 3. **Receipts come from CI when possible, and CI must be green before merging.** Local gates run on Windows only; CI also builds Linux, which caught a Linux-only error on Oct 14. Link the GitHub Actions run. An agent's own report of a local run counts, but name the machine and paste the command output summary.
 4. **Guards protect what already works.** Before any PR merges, every line in `agents/guards.txt` must pass, plus the `AGENTS.md` §5 gate. A guard that goes red sets that feature to `broken` and unticks it; the PR that broke it fixes it or is reverted.
 5. **Owners follow "local first"** (`TASKS.md` › Routing): the local agent codes, cloud Codex is the fallback, Claude designs the UI rows in §3 and reviews.
