@@ -20,9 +20,11 @@ Half-closing before draining is fine on Windows; closing with the body unread is
 Gates green here: ai-client 39/0/0 over ten runs (no flakes), engine lib 1658/0/13 plus 54 integration binaries,
 cli 34/0/0, `panic_hunt -- --ignored`, app build, layers, clippy `-D warnings`, fmt.
 
-**Next:** open the PR at `https://github.com/erikerikerik/photocraft/compare/main...ai/bf-02-photocraft?expand=1`
-(no `gh` on this machine), independent review, CI green on ubuntu and windows, then merge. The BF-02 row in
-`agents/TASKS.md` stays `review` until then.
+**Next:** PR #15 is open (https://github.com/erikerikerik/photocraft/pull/15, base `main`, mergeable, not merged): it needs an
+independent review and green CI on ubuntu and windows before merge. The BF-02 row in `agents/TASKS.md` stays
+`gh` 2.102.0 is now on CraftML at `E:\CraftML\tools\ghx\bin` (the winget MSI is blocked by
+org policy, so it is the release zip) and signed in through the device flow, which unblocks CN-00 half: agents can
+open PRs; a scoped fine-grained token is still Erik’s call.
 
 
 ## 2026-10-14 (end of day): Claude
