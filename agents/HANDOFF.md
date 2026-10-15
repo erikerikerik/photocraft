@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14: Claude (MG-04 review and merge, PC-06 prompt)
+
+- MG-04 (with MG-05) approved and merged into CAIM `main`: real LaMa on the CPU, 1.6 s per fill after the first. Clean networked build confirmed on Linux; Windows via CI.
+- MG-04 ran with no network (sandbox), so its golden photo is synthetic. `run-task.ps1` now turns network on.
+- **Next:** `run-task.ps1 pc-06` (PC-05 + PC-06 + real golden photo), then Erik's five-minute hands-on check closes Milestone 1.
+
 ## 2026-10-14: Claude (less hand work for Erik)
 
 - New `agents/tools/run-task.ps1 <task>`: refuses if either repo has uncommitted changes, switches both to an up-to-date `main`, then starts Codex on `agents/prompts/local-<task>.md` (`-Exec` for unattended with a log in `E:\CraftML\work\logs`).
