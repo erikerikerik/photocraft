@@ -50,6 +50,10 @@ if (-not (Test-Path $prompt)) {
     exit 1
 }
 
+# Network on inside the sandbox (crates.io, model and runtime downloads, git push). Without this,
+# Codex's sandbox can block the network, as it did on MG-04's first run.
+$sandbox = @('--sandbox', 'workspace-write', '-c', 'sandbox_workspace_write.network_access=true')
+
 # No double quotes inside: Windows PowerShell 5.1 mangles them when passing arguments to programs.
 $ask = "Read $prompt and carry out the task below the --- line exactly."
 Write-Host "Starting Codex ($CodexProfile) on local-$id.md ..." -ForegroundColor Cyan
@@ -59,9 +63,9 @@ if ($Exec) {
     $logs = Join-Path $Work 'logs'
     New-Item -ItemType Directory -Force $logs | Out-Null
     $log = Join-Path $logs ('{0}-{1:yyyyMMdd-HHmm}.log' -f $id, (Get-Date))
-    codex exec --profile $CodexProfile $ask 2>&1 | Tee-Object -FilePath $log
+    codex exec --profile $CodexProfile @sandbox $ask 2>&1 | Tee-Object -FilePath $log
     Write-Host "Log: $log"
 }
 else {
-    codex --profile $CodexProfile $ask
+    codex --profile $CodexProfile @sandbox $ask
 }
