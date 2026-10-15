@@ -86,7 +86,16 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
             ctx.progress(0.0, LABEL);
             // The provider's limit first (for Craft AI Manager this also finds out whether it is
             // running): nothing is read or encoded for a window it would refuse.
-            let max_pixels = provider.max_pixels(AiTask::FillMaskedArea)?.unwrap_or(ai::DEFAULT_MAX_PIXELS);
+            // Only the two answers that mean "this manager cannot do the job at all" stop the fill:
+            // it is not running, or it refused our token. Anything else (a blip, a manager that
+            // does not know /v1/tasks) falls back to the default limit and the fill goes ahead; a
+            // window that really is too big still fails below, and the submit reports the rest.
+            let max_pixels = match provider.max_pixels(AiTask::FillMaskedArea) {
+                Ok(Some(limit)) => limit,
+                Ok(None) => ai::DEFAULT_MAX_PIXELS,
+                Err(error @ (AiError::NoProvider | AiError::TokenMismatch)) => return Err(error.into()),
+                Err(_) => ai::DEFAULT_MAX_PIXELS,
+            };
             ai::check_window_pixels(window, max_pixels)?;
             ctx.check()?;
             let FillWindow { img, bounds, original, cover, n_hole, .. } = edit_menu_cmds::read_fill_window(&doc, id, &sel, window, sample_all, fmt, ctx)?;

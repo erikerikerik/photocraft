@@ -17,3 +17,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 # PNG for the image and mask parts (SPEC v1.1 amendment 5: no HTTP dependency; png is already in the tree).
 png = "0.18"
+
+[dev-dependencies]
+# The tests composite the manager's result the way the document does (amendment 16: one blend).
+photocraft-compose = { workspace = true }

@@ -14,8 +14,9 @@ fn ai_submit_poll_result_happy_path() {
     assert_eq!(p.poll(&id).unwrap(), AiJobState::Done);
     let r = p.result(&id).unwrap();
     // Amendment 16: the fill at full strength wherever coverage > 0 (the 0.5 pixel too), the input
-    // where it is 0, alpha untouched. PhotoCraft blends by coverage when it composites the layer.
-    assert_eq!(r.pixels, vec![0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 0.25, 0.75, 0.75, 0.75, 0.25]);
+    // where it is 0, and a covered pixel made opaque. PhotoCraft blends by coverage when it
+    // composites the layer, once.
+    assert_eq!(r.pixels, vec![0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 1.0, 0.75, 0.75, 0.75, 1.0]);
     assert_eq!(req.pixels, vec![0.25; 12]);
     let json = serde_json::to_value(&r).unwrap();
     assert_eq!(json["model"], "solid-fill");
@@ -23,6 +24,30 @@ fn ai_submit_poll_result_happy_path() {
     assert_eq!(json["provider"], "local fake");
     assert_eq!(json["elapsed_ms"], 12);
     assert_eq!((r.model.as_str(), r.device.as_str(), r.provider.as_str(), r.elapsed_ms), ("solid-fill", "CPU", "local fake", 12));
+}
+
+/// BF-02 follow-up (amendment 16): like Craft AI Manager, the fake makes a covered pixel opaque.
+/// Alpha has no fill to blend towards, so the fill layer's alpha is the coverage and nothing
+/// blends it twice. Formats with no alpha channel are unchanged.
+#[test]
+fn ai_the_fake_makes_a_covered_pixel_opaque() {
+    for format in [PixelFormat::RGBA8, PixelFormat::RGBA32F, PixelFormat::GRAYA8, PixelFormat::CMYKA8, PixelFormat::GRAY8] {
+        let p = FakeProvider { polls: 1, ..Default::default() };
+        let req = request(format);
+        let id = p.submit(&req).unwrap();
+        let r = p.result(&id).unwrap();
+        let (n, colour) = (format.channels(), format.mode.color_channels());
+        for (at, coverage) in [0.0f32, 0.5, 1.0].into_iter().enumerate() {
+            let pixel = &r.pixels[at * n..(at + 1) * n];
+            let filled = coverage > 0.0;
+            let want = if filled { 0.75 } else { 0.25 };
+            assert_eq!(&pixel[..colour], vec![want; colour].as_slice(), "{format:?} at coverage {coverage}: the colour channels");
+            match pixel.get(colour) {
+                Some(alpha) => assert_eq!(*alpha, if filled { 1.0 } else { 0.25 }, "{format:?} at coverage {coverage}: a covered pixel is opaque"),
+                None => assert_eq!(n, colour, "{format:?} has no alpha channel to make opaque"),
+            }
+        }
+    }
 }
 
 #[test]
@@ -268,6 +293,15 @@ fn ai_a_window_over_max_pixels_is_refused_with_a_sentence() {
     assert_eq!(e.to_string(), "The area to fill is 64.1 megapixels, over the 64 megapixels Craft AI Manager accepts; select a smaller area.");
     let e = check_window_pixels(Rect::new(0, 0, 12000, 8000), 4_000_000).unwrap_err();
     assert!(e.to_string().starts_with("The area to fill is 96.0 megapixels, over the 4 megapixels"), "{e}");
+    // A limit that is not a whole number of megapixels is named as it is: 1.5, not "1".
+    let e = check_window_pixels(Rect::new(0, 0, 2000, 1000), 1_500_000).unwrap_err();
+    assert_eq!(e.to_string(), "The area to fill is 2.0 megapixels, over the 1.5 megapixels Craft AI Manager accepts; select a smaller area.");
+    // Still rounded down, so the sentence never claims a limit the manager does not have.
+    let e = check_window_pixels(Rect::new(0, 0, 2000, 1000), 1_599_999).unwrap_err();
+    assert!(e.to_string().contains("over the 1.5 megapixels Craft AI Manager accepts"), "{e}");
+    // A whole number of megapixels keeps no decimal point.
+    let e = check_window_pixels(Rect::new(0, 0, 2000, 1000), 1_000_000).unwrap_err();
+    assert!(e.to_string().contains("over the 1 megapixels Craft AI Manager accepts"), "{e}");
     // A provider that advertises nothing: the trait's default.
     assert_eq!(FakeProvider::default().max_pixels(AiTask::FillMaskedArea), Ok(None));
 }

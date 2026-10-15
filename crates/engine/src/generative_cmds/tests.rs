@@ -421,6 +421,37 @@ fn a_provider_that_is_not_running_fails_before_the_window_is_read() {
     assert!(provider.state.lock().unwrap().request.is_none(), "nothing was encoded or submitted");
 }
 
+/// BF-02 follow-up: a manager that cannot answer the limit question is not a reason to refuse the
+/// fill. Only "isn't running" and a refused token stop early; anything else falls back to the
+/// default limit and the fill goes ahead.
+#[test]
+fn a_failed_limit_check_falls_back_to_the_default_limit() {
+    for error in [
+        AiError::Other("Craft AI Manager did not answer in time.".into()),
+        AiError::Other("Craft AI Manager answered with something that is not its task list.".into()),
+        AiError::Other("PhotoCraft lost the connection to Craft AI Manager.".into()),
+    ] {
+        let mut s = blob_session(8);
+        let provider = Arc::new(FakeProvider { max_pixels: Some(Err(error.clone())), ..Default::default() });
+        s.set_ai_provider(Some(provider.clone()));
+        assert!(s.execute(CMD, json!({})).is_ok(), "{error}: the fill should still run");
+        let st = provider.state.lock().unwrap();
+        assert_eq!(st.limit_asks, 1, "the limit was asked for once");
+        assert!(st.request.is_some(), "{error}: the window was still sent");
+    }
+}
+
+/// BF-02 follow-up: a refused token is not a blip. It stops the fill before the window is read,
+/// with the sentence that tells the user to restart Craft AI Manager.
+#[test]
+fn a_refused_token_fails_before_the_window_is_read() {
+    let mut s = blob_session(8);
+    let provider = Arc::new(FakeProvider { max_pixels: Some(Err(AiError::TokenMismatch)), ..Default::default() });
+    s.set_ai_provider(Some(provider.clone()));
+    assert_eq!(s.execute(CMD, json!({})).unwrap_err().to_string(), "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.");
+    assert!(provider.state.lock().unwrap().request.is_none(), "nothing was encoded or submitted");
+}
+
 /// BF-02 P6: amendment 4's note for 32-bit documents (values are clamped to 0–1 for the model).
 #[test]
 fn a_32_bit_document_s_result_says_its_values_were_clamped() {

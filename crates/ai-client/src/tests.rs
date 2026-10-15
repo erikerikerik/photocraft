@@ -1,17 +1,19 @@
 //! PC-03 tests: the client against an in-process fake Craft AI Manager (SPEC amendment 11).
 //! Every test uses its own endpoint file, so they run in parallel without touching the environment.
 
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, PoisonError};
 
 use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest, AiResult, AiTask};
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest, AiResult, AiTask, TOKEN_MISMATCH};
 use photocraft_geom::Rect;
 
+use crate::endpoint::Endpoint;
 use crate::fake_server::{FakeServer, response};
-use crate::provider::{CaimProvider, TOKEN_MISMATCH};
+use crate::provider::CaimProvider;
 use crate::{http, pixels, protocol};
 
 static COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -635,24 +637,29 @@ fn noisy_request(width: u32, height: u32) -> AiRequest {
     req
 }
 
-/// X2: a manager that answers 401 after the head and closes with the body unread makes the upload
-/// fail part-way. The answer is still read and used, so the user is told to restart the manager
-/// (the common case: it restarted with a new token), not that the connection was lost.
+/// X2: a manager that answers 401 as soon as the head arrives, then ignores the rest of the upload.
+/// The answer is still read and used, so the user is told to restart the manager (the common case:
+/// it restarted with a new token), not that the connection was lost.
 #[test]
 fn an_early_401_during_a_large_upload_is_reported_as_the_token_message() {
     let server = FakeServer::start();
     let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-stale"));
-    // About 25 MB of PNG: far more than the loopback socket buffers hold, so the write must fail.
+    // About 25 MB of PNG: far more than the loopback socket buffers hold, so the manager has
+    // answered long before the upload ends.
     let req = noisy_request(2900, 2900);
     server.queue_early(response(401, "application/json", br#"{"error": "That token is not this manager's."}"#));
     let error = endpoint.provider().submit(&req).expect_err("a 401 must fail the job");
     assert_eq!(error.to_string(), TOKEN_MISMATCH);
+    assert!(matches!(error, AiError::TokenMismatch), "the engine stops a fill on this kind and only this kind: {error}");
     let captured = server.captured();
     assert_eq!(captured.len(), 1);
-    assert!(captured[0].body.len() < 25_000_000, "the fake manager must not have read the whole body");
+    assert_eq!((captured[0].method.as_str(), captured[0].path.as_str()), ("POST", "/v1/jobs"));
+    assert!(captured[0].body.len() < 64 * 1024, "the fake manager answered from the head, it did not keep the body");
 }
 
 /// X2: the same for any status the manager sends early (413, 503): its own sentence, not "lost".
+/// The write-failure half of that path - nothing written again before the reply is read - is
+/// proven by `a_failed_upload_write_is_not_tried_again_before_the_reply_is_read`.
 #[test]
 fn an_early_error_reply_uses_the_manager_s_sentence() {
     let server = FakeServer::start();
@@ -750,7 +757,9 @@ fn max_pixels_comes_from_the_task_list() {
     server.queue_json(200, r#"{"tasks": [{"id": "fill_masked_area"}]}"#);
     assert_eq!(provider.max_pixels(AiTask::FillMaskedArea), Ok(None), "no limit advertised");
     server.queue_json(401, r#"{"error": "no"}"#);
-    assert_eq!(provider.max_pixels(AiTask::FillMaskedArea).expect_err("stale token").to_string(), TOKEN_MISMATCH);
+    let stale = provider.max_pixels(AiTask::FillMaskedArea).expect_err("stale token");
+    assert_eq!(stale.to_string(), TOKEN_MISMATCH);
+    assert!(matches!(stale, AiError::TokenMismatch), "the engine falls back to the default limit for every other error: {stale}");
     assert_eq!(TempEndpoint::missing().provider().max_pixels(AiTask::FillMaskedArea), Err(AiError::NoProvider));
     let calls = server.captured();
     assert!(calls.iter().all(|call| (call.method.as_str(), call.path.as_str()) == ("GET", "/v1/tasks")), "{calls:?}");
@@ -837,4 +846,157 @@ fn pngs_are_encoded_with_fast_compression() {
     assert_ne!(reference(png::Compression::Fast), reference(png::Compression::Balanced), "the check below can tell them apart");
     assert_eq!(png, reference(png::Compression::Fast));
     assert!(matches!(pixels::PNG_COMPRESSION, png::Compression::Fast));
+}
+
+/// A writer that takes `quota` bytes and then fails, counting the attempts so a write after the
+/// failure is visible.
+#[derive(Debug)]
+struct StallingWriter {
+    stall: Mutex<Stall>,
+    quota: usize,
+}
+
+#[derive(Debug, Default)]
+struct Stall {
+    taken: usize,
+    failures: usize,
+}
+
+impl StallingWriter {
+    fn new(quota: usize) -> Self {
+        Self { stall: Mutex::new(Stall::default()), quota }
+    }
+}
+
+impl Write for StallingWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        let mut stall = self.stall.lock().unwrap_or_else(PoisonError::into_inner);
+        if stall.taken >= self.quota {
+            stall.failures += 1;
+            return Err(std::io::Error::new(std::io::ErrorKind::WriteZero, "the manager stopped reading"));
+        }
+        let take = (self.quota - stall.taken).min(data.len());
+        stall.taken += take;
+        Ok(take)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// BF-02 follow-up (http.rs): after an upload write fails, nothing goes back out before the reply
+/// is read. Dropping the BufWriter flushes what it still holds, and that second write resets the
+/// connection on Windows, which throws away the answer the manager already sent.
+#[test]
+fn a_failed_upload_write_is_not_tried_again_before_the_reply_is_read() {
+    // Many small pieces, so the 64 KiB BufWriter still holds bytes when the write fails; one large
+    // piece would go straight to the writer and leave the buffer empty.
+    let piece = vec![7u8; 1024];
+    let body: Vec<&[u8]> = (0..400).map(|_| piece.as_slice()).collect();
+    let (writer, error) =
+        http::write_request(StallingWriter::new(40 * 1024), &Endpoint::loopback(1, "tok"), "POST", "/v1/jobs", None, &body, body.len() * 1024)
+            .expect_err("the writer stops after 40 KiB");
+    assert_eq!(error.to_string(), "PhotoCraft lost the connection to Craft AI Manager.");
+    let stall = writer.stall.lock().unwrap_or_else(PoisonError::into_inner);
+    assert_eq!(stall.failures, 1, "the failed write is not attempted a second time");
+    assert_eq!(stall.taken, 40 * 1024, "the upload stopped part-way, with bytes left in the buffer");
+}
+
+/// BF-02 follow-up (amendment 16): the manager answers at full strength, opaque wherever the mask
+/// is above zero, and PhotoCraft blends once - when the "Generative Fill" layer composites. So what
+/// is shown is the fill weighted by the selection's coverage, not a blend done twice.
+#[test]
+fn a_full_strength_result_from_the_manager_composites_by_coverage() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-blend"));
+    let mut s = photocraft_engine::Session::new();
+    s.execute("file.new", serde_json::json!({"width": 64, "height": 48, "background": "black"})).expect("a document");
+    s.execute("select.rect", serde_json::json!({"x": 26, "y": 16, "width": 12, "height": 14})).expect("a selection");
+    // A half-covered ring around a fully covered middle: the coverage the manager is sent, and the
+    // weight the composite is blended by.
+    s.edit("half selected", |doc, _active| {
+        let sel = doc.selection.as_mut().expect("the selection");
+        sel.fill_rect(Rect::new(26, 16, 38, 30), &[0.5]);
+        sel.fill_rect(Rect::new(27, 17, 37, 29), &[1.0]);
+        Ok(())
+    })
+    .expect("a half-selected ring");
+    // The padding around a 14-pixel selection is wider than the document, so the window is the
+    // whole canvas and the manager's answer lines up with it pixel for pixel.
+    let mut answer: Vec<f32> = Vec::with_capacity(64 * 48 * 4);
+    for y in 0..48 {
+        for x in 0..64 {
+            let px = if (26..38).contains(&x) && (16..30).contains(&y) { [0.75, 0.75, 0.75, 1.0] } else { [0.0, 0.0, 0.0, 1.0] };
+            answer.extend_from_slice(&px);
+        }
+    }
+    let png = pixels::encode_image(&answer, RGBA8, 64, 48).expect("the manager's result encodes");
+    s.set_ai_provider(Some(std::sync::Arc::new(endpoint.provider())));
+    server.queue_json(200, r#"{"tasks": [{"id": "fill_masked_area", "needs_prompt": false, "max_pixels": 64000000}]}"#);
+    server.queue_json(202, r#"{"id": "job-blend"}"#);
+    server.queue_json(200, DONE);
+    server.queue_json(200, r#"{"model": "lama-onnx", "device": "cpu", "provider": "local", "elapsed_ms": 1234, "image_size": [64, 48]}"#);
+    server.queue(response(200, "image/png", &png));
+    let r = s.execute("edit.generativeFill", serde_json::json!({})).expect("the fill runs");
+    assert_eq!(r["ai"]["model"].as_str(), Some("lama-onnx"), "{r}");
+    // The layer holds the manager's answer at full strength; its alpha is the coverage, which is how
+    // the blend is carried without blending yet.
+    let state = s.active().expect("a document");
+    let fill_layer = state.active_layer.expect("the fill layer is active");
+    let doc = state.doc.clone();
+    let surf = doc.layer(fill_layer).expect("the fill layer").surface().expect("a raster layer");
+    let ring = surf.pixel(26, 20);
+    assert!((ring[0] - 0.75).abs() <= 1.0 / 255.0, "the client hands back full strength, not a pre-blend: {ring:?}");
+    assert!((ring[3] - 0.5).abs() <= 1.0 / 255.0, "the layer's alpha carries the coverage: {ring:?}");
+    // What the canvas shows: one blend, weighted by coverage, over the black canvas.
+    let composite = photocraft_compose::render(&doc, Rect::new(0, 0, 64, 48));
+    let shown = |x: i32, y: i32| composite.px[(y * 64 + x) as usize];
+    for channel in 0..3 {
+        assert!((shown(26, 20)[channel] - 0.375).abs() <= 1.0 / 255.0, "half coverage composites halfway: {}", shown(26, 20)[channel]);
+        assert!((shown(32, 23)[channel] - 0.75).abs() <= 1.0 / 255.0, "full coverage is the fill: {}", shown(32, 23)[channel]);
+        assert!(shown(10, 10)[channel].abs() <= 1.0 / 255.0, "outside the selection is the canvas: {}", shown(10, 10)[channel]);
+    }
+    let post = server.captured().into_iter().find(|call| call.method == "POST").expect("the upload");
+    let boundary = header_value(post.header("content-type")).expect("the upload should name a boundary");
+    let parts = multipart_parts(&post.body, &boundary);
+    assert_eq!(png_header(&parts[1].1), (64, 48, png::ColorType::Rgba, png::BitDepth::Eight), "the window the manager was sent");
+}
+
+/// BF-02 follow-up: a failed /v1/tasks is not a reason to refuse the fill. A manager that answers
+/// with something that is not its task list still gets the window, under the default limit.
+#[test]
+fn a_manager_that_cannot_state_its_limit_still_gets_the_fill() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-nolimit"));
+    let mut s = photocraft_engine::Session::new();
+    s.execute("file.new", serde_json::json!({"width": 64, "height": 48, "background": "white"})).expect("a document");
+    s.execute("select.rect", serde_json::json!({"x": 26, "y": 16, "width": 12, "height": 14})).expect("a selection");
+    s.set_ai_provider(Some(std::sync::Arc::new(endpoint.provider())));
+    server.queue_json(200, r#"{"nonsense": true}"#);
+    server.queue_json(202, r#"{"id": "job-nolimit"}"#);
+    server.queue_json(200, DONE);
+    server.queue_json(200, r#"{"model": "lama-onnx", "device": "cpu", "provider": "local", "elapsed_ms": 1234, "image_size": [64, 48]}"#);
+    let grey = vec![0.75f32; 64 * 48 * 4];
+    server.queue(response(200, "image/png", &pixels::encode_image(&grey, RGBA8, 64, 48).expect("the result encodes")));
+    let r = s.execute("edit.generativeFill", serde_json::json!({})).expect("the fill runs anyway");
+    assert!(r["filled"].as_u64().unwrap_or_default() > 0, "the window was filled: {r}");
+    let calls: Vec<(String, String)> = server.captured().into_iter().map(|call| (call.method, call.path)).collect();
+    assert!(calls.contains(&("POST".to_string(), "/v1/jobs".to_string())), "the fill was still sent: {calls:?}");
+}
+
+/// BF-02 follow-up: a refused token is different - the manager is running but will not answer, so
+/// the fill stops with the restart sentence before any pixel is encoded.
+#[test]
+fn a_refused_token_stops_generative_fill_before_the_upload() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-stale-e2e"));
+    let mut s = photocraft_engine::Session::new();
+    s.execute("file.new", serde_json::json!({"width": 64, "height": 48, "background": "white"})).expect("a document");
+    s.execute("select.rect", serde_json::json!({"x": 26, "y": 16, "width": 12, "height": 14})).expect("a selection");
+    s.set_ai_provider(Some(std::sync::Arc::new(endpoint.provider())));
+    server.queue_json(401, r#"{"error": "That token is not this manager's."}"#);
+    let error = s.execute("edit.generativeFill", serde_json::json!({})).expect_err("a refused token");
+    assert_eq!(error.to_string(), TOKEN_MISMATCH, "{error}");
+    let calls: Vec<(String, String)> = server.captured().into_iter().map(|call| (call.method, call.path)).collect();
+    assert_eq!(calls, vec![("GET".to_string(), "/v1/tasks".to_string())], "nothing was uploaded");
 }

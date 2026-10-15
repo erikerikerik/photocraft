@@ -71,10 +71,19 @@ pub struct AiResult {
     pub elapsed_ms: u64,
 }
 
+/// What a 401 from the manager means: the token in the endpoint file is not its current one, which
+/// is what happens when the manager restarted. The sentence lives here so a caller can act on
+/// [`AiError::TokenMismatch`] without copying it.
+pub const TOKEN_MISMATCH: &str = "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.";
+
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum AiError {
     #[error("Craft AI Manager isn't running")]
     NoProvider,
+    /// The manager refused the token (401). Its own kind, so a caller can tell "restart the
+    /// manager" from a blip it is worth working around.
+    #[error("{}", TOKEN_MISMATCH)]
+    TokenMismatch,
     #[error("The AI job was cancelled")]
     Cancelled,
     #[error("{0}")]
@@ -119,10 +128,12 @@ pub fn check_window_pixels(window: Rect, max_pixels: u64) -> Result<(), AiError>
     let pixels = window.size().area();
     if pixels > max_pixels {
         let (size, limit) = if max_pixels >= 1_000_000 {
-            // Round the size up and the limit down, so the sentence never reads "64.0 over 64".
+            // Round the size up and the limit down, so the sentence never reads "64.0 over 64". A
+            // limit that is not a whole number of megapixels keeps its tenth: 1.5, never 1.
             let size = (pixels as f64 / 100_000.0).ceil() / 10.0;
-            let limit = (max_pixels as f64 / 1_000_000.0).floor();
-            (format!("{size:.1} megapixels"), format!("{limit:.0} megapixels"))
+            let limit = (max_pixels as f64 / 100_000.0).floor() / 10.0;
+            let limit = if limit.fract() == 0.0 { format!("{limit:.0} megapixels") } else { format!("{limit:.1} megapixels") };
+            (format!("{size:.1} megapixels"), limit)
         } else {
             (format!("{pixels} pixels"), format!("{max_pixels} pixels"))
         };

@@ -50,16 +50,21 @@ const EARLY_REPLY_TIMEOUT: Duration = Duration::from_secs(2);
 /// read and used: the user gets "restart Craft AI Manager", not "lost the connection".
 pub fn request(endpoint: &Endpoint, method: &str, path: &str, content_type: Option<&str>, body: &[&[u8]], max_body_bytes: usize) -> Result<Reply, AiError> {
     let length = body_length(body)?;
-    let mut stream = TcpStream::connect_timeout(&endpoint.addr, CONNECT_TIMEOUT).map_err(|_| AiError::NoProvider)?;
+    let stream = TcpStream::connect_timeout(&endpoint.addr, CONNECT_TIMEOUT).map_err(|_| AiError::NoProvider)?;
     if stream.set_read_timeout(Some(READ_TIMEOUT)).is_err() || stream.set_write_timeout(Some(WRITE_TIMEOUT)).is_err() {
         return Err(AiError::Other("PhotoCraft could not put a timeout on the Craft AI Manager connection.".into()));
     }
-    if let Err(write_error) = write_request(&mut stream, endpoint, method, path, content_type, body, length) {
-        // Whatever the manager said before it stopped reading is better than a broken pipe; if it
-        // said nothing (or nothing readable), the write error is the real story.
-        let _ = stream.set_read_timeout(Some(EARLY_REPLY_TIMEOUT));
-        return read_reply(stream, max_body_bytes).map_err(|_| write_error);
-    }
+    let stream = match write_request(stream, endpoint, method, path, content_type, body, length) {
+        Ok(stream) => stream,
+        Err((stream, write_error)) => {
+            // Whatever the manager said before it stopped reading is better than a broken pipe; if
+            // it said nothing (or nothing readable), the write error is the real story. Nothing goes
+            // back out before reading it: writing again to a socket the manager stopped reading
+            // resets the connection, and on Windows that throws the answer away.
+            let _ = stream.set_read_timeout(Some(EARLY_REPLY_TIMEOUT));
+            return read_reply(stream, max_body_bytes).map_err(|_| write_error);
+        }
+    };
     read_reply(stream, max_body_bytes)
 }
 
@@ -72,15 +77,19 @@ pub fn body_length(body: &[&[u8]]) -> Result<usize, AiError> {
         .ok_or_else(|| AiError::Other("The request for Craft AI Manager is over the protocol's 1 GiB limit; select a smaller area.".into()))
 }
 
-fn write_request(
-    stream: &mut TcpStream,
+/// The head and the body pieces, in order. The stream comes back either way, because the caller
+/// reads the reply from it even when the upload failed part-way. The buffer is taken apart with
+/// [BufWriter::into_parts] rather than dropped: dropping it would flush what is still buffered, and
+/// that second write is what loses the early reply on Windows.
+pub(crate) fn write_request<W: Write>(
+    stream: W,
     endpoint: &Endpoint,
     method: &str,
     path: &str,
     content_type: Option<&str>,
     body: &[&[u8]],
     length: usize,
-) -> Result<(), AiError> {
+) -> Result<W, (W, AiError)> {
     let mut head = Vec::with_capacity(256);
     head.extend_from_slice(method.as_bytes());
     head.extend_from_slice(b" ");
@@ -100,11 +109,26 @@ fn write_request(
     // Small pieces (the head, each part's header) gather in the buffer; a piece larger than the
     // buffer goes straight to the socket, so the image is never copied.
     let mut out = BufWriter::with_capacity(64 * 1024, stream);
-    out.write_all(&head).map_err(|error| io_error(error, true))?;
-    for piece in body {
-        out.write_all(piece).map_err(|error| io_error(error, true))?;
+    // The error [BufWriter::into_parts] reports is the one write_all or flush just returned; the
+    // stream is the part we want back.
+    let stop = |out: BufWriter<W>, error: std::io::Error| {
+        // into_parts hands back the writer and the bytes still in its buffer; the bytes are dropped
+        // on purpose, and the error it reports is the one write_all or flush already returned.
+        let (stream, _) = out.into_parts();
+        (stream, io_error(error, true))
+    };
+    if let Err(error) = out.write_all(&head) {
+        return Err(stop(out, error));
     }
-    out.flush().map_err(|error| io_error(error, true))
+    for piece in body {
+        if let Err(error) = out.write_all(piece) {
+            return Err(stop(out, error));
+        }
+    }
+    match out.flush() {
+        Ok(()) => Ok(out.into_parts().0),
+        Err(error) => Err(stop(out, error)),
+    }
 }
 
 fn read_reply(stream: TcpStream, max_body_bytes: usize) -> Result<Reply, AiError> {

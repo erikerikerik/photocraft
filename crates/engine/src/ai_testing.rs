@@ -1,8 +1,8 @@
 //! The shared AI test provider: it fills the request with a solid colour and can be told to
 //! fail, stall, return bad data or be cancelled. Like Craft AI Manager (SPEC amendment 16) it
-//! returns the fill at full strength wherever coverage > 0 and the input bit for bit elsewhere;
-//! blending by coverage is PhotoCraft's job, done once when the layer is composited. `ai::tests` and the commands that call a
-//! provider (Generative Fill) both use it.
+//! returns the fill at full strength wherever coverage > 0 (alpha made opaque too) and the input
+//! bit for bit elsewhere; blending by coverage is PhotoCraft's job, done once when the layer is
+//! composited. `ai::tests` and the commands that call a provider (Generative Fill) both use it.
 
 use std::sync::{Mutex, PoisonError};
 
@@ -101,11 +101,16 @@ impl AiProvider for FakeProvider {
         let req = s.request.as_ref().ok_or_else(|| AiError::Other("No job was submitted".into()))?;
         let mut pixels = req.pixels.clone();
         // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
-        // 16); alpha and the unselected pixels are the input as it came.
+        // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
+        // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
         for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
             if *coverage > 0.0 {
                 for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
                     *sample = 0.75;
+                }
+                // The sample after the colour channels, when the format has one.
+                if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
+                    *alpha = 1.0;
                 }
             }
         }

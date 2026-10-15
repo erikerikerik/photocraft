@@ -19,9 +19,6 @@ use crate::protocol;
 /// caller that stopped tracking jobs must not grow the map forever.
 const MAX_TRACKED_JOBS: usize = 16;
 
-/// The answer to a 401: the manager restarted (new token) since the endpoint file was read.
-pub const TOKEN_MISMATCH: &str = "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.";
-
 /// What a job needs to be polled, fetched and cancelled: the manager it went to, and the window it
 /// described. The endpoint is kept with the job because the token changes on every manager start.
 #[derive(Clone, Debug)]
@@ -81,7 +78,9 @@ impl CaimProvider {
             return Ok(reply);
         }
         if reply.status == 401 {
-            return Err(AiError::Other(TOKEN_MISMATCH.into()));
+            // Its own kind, not Other: the engine stops a fill on this one and falls back to the
+            // default window limit on everything else.
+            return Err(AiError::TokenMismatch);
         }
         Err(AiError::Other(protocol::error_sentence(reply.status, &reply.body)))
     }

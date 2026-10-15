@@ -2,6 +2,29 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15: Codex (GPT-6) - BF-02 review follow-ups, and why X2 failed on Windows
+
+Five reviewer points on `ai/bf-02-photocraft`, each with a test (receipt: `agents/receipts/BF-02.md`, Follow-up
+section): a failed `/v1/tasks` no longer blocks a fill (only "isn't running" and a refused token do - the 401 now
+arrives as a new `AiError::TokenMismatch`); `FakeProvider` makes a covered pixel opaque (amendment 16); megapixel
+limits print as "1.5 megapixels"; `http::write_request` takes the `BufWriter` apart with `into_parts()` so nothing is
+written twice before the early reply is read; and a new client test composites a full-strength `result.png` by
+coverage through `photocraft_compose::render`.
+
+**Windows finding, worth remembering:** a socket from `accept()` inherits the listener's non-blocking mode on Windows,
+so the fake manager's reads failed with `WouldBlock`, it closed with about 5 MB of the body unread, and the RST deleted
+the early 401 the client had not read yet. `serve_one` now puts the socket back to blocking first (CAIM's
+`handle_connection` does the same) and its early path drains the announced body, like BF-01's `close_after_reply`.
+Half-closing before draining is fine on Windows; closing with the body unread is not, on any platform.
+
+Gates green here: ai-client 39/0/0 over ten runs (no flakes), engine lib 1658/0/13 plus 54 integration binaries,
+cli 34/0/0, `panic_hunt -- --ignored`, app build, layers, clippy `-D warnings`, fmt.
+
+**Next:** open the PR at `https://github.com/erikerikerik/photocraft/compare/main...ai/bf-02-photocraft?expand=1`
+(no `gh` on this machine), independent review, CI green on ubuntu and windows, then merge. The BF-02 row in
+`agents/TASKS.md` stays `review` until then.
+
+
 ## 2026-10-14 (end of day): Claude
 
 **Done today:** SY-01 (upstream 0.9.0), PC-04, MG-00, MG-01, MG-02, MG-04 (+MG-05), all reviewed and merged. Craft AI Manager runs real LaMa on the CPU; PhotoCraft's CLI gets a "Generative Fill" layer from it (1.6 s per fill after the first). CI green on both repos.
