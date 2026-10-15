@@ -2,6 +2,18 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15: Codex (GPT-6) - PR #15 review note: the NaN/Inf check moved into `ai::wait_for`
+
+The finite-pixel scan sat in `generative_cmds::run` after `run_to_completion` had already returned `Ok`, so a result
+with a NaN or inf failed the command but left the job on the manager. `ai::wait_for` now rejects non-finite result
+pixels beside its window/format/size check, so `run_to_completion` sends the DELETE for it like it does for any other
+bad result, and `generative_cmds::run` no longer scans the result. The sentence is now "The AI result contains invalid
+pixel values" (the "; the document is unchanged" half was engine-level; the test still asserts the document is
+unchanged). `generative_cmds::tests::a_bad_provider_result_is_an_error_and_the_document_is_unchanged` keeps a handle
+on the fake and asserts exactly one cancellation for all four bad-result cases, and `bad_pixel` joined
+`ai::tests::ai_every_error_after_submit_cancels_the_job_on_the_provider`.
+Gates: engine lib 1658/0/13, ai-client 39/0/0, clippy `-D warnings` on both crates, fmt.
+
 ## 2026-10-15: Codex (GPT-6) - BF-02 review follow-ups, and why X2 failed on Windows
 
 Five reviewer points on `ai/bf-02-photocraft`, each with a test (receipt: `agents/receipts/BF-02.md`, Follow-up
