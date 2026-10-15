@@ -21,8 +21,11 @@ Gates green here: ai-client 39/0/0 over ten runs (no flakes), engine lib 1658/0/
 cli 34/0/0, `panic_hunt -- --ignored`, app build, layers, clippy `-D warnings`, fmt.
 
 **Next:** PR #15 is open (https://github.com/erikerikerik/photocraft/pull/15, base `main`, mergeable, not merged): it needs an
-independent review and green CI on ubuntu and windows before merge. The BF-02 row in `agents/TASKS.md` stays
-`gh` 2.102.0 is now on CraftML at `E:\CraftML\tools\ghx\bin` (the winget MSI is blocked by
+independent review and green CI on ubuntu and windows before merge. **CI cannot run yet:** GitHub has paused
+workflows on the photocraft fork ("not currently being run on this fork due to the scale of GitHub Actions
+usage"); the repo created no run after 2026-10-14 20:41Z, not even for PR #14's merge into `main`. A maintainer
+must re-enable workflows on the fork's Actions tab. The BF-02 row in `agents/TASKS.md` stays `review`
+until then. `gh` 2.102.0 is now on CraftML at `E:\CraftML\tools\ghx\bin` (the winget MSI is blocked by
 org policy, so it is the release zip) and signed in through the device flow, which unblocks CN-00 half: agents can
 open PRs; a scoped fine-grained token is still Erik’s call.
 
