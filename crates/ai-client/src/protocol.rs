@@ -1,6 +1,7 @@
 //! The JSON and multipart shapes of SPEC amendment 11, and the checks that keep a hostile
 //! manager from steering the client (job ids go into a URL, error text goes into a message).
 
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use photocraft_engine::ai::{AiError, AiJobState, AiRequest, AiTask};
@@ -101,7 +102,37 @@ pub fn boundary(parts: &[Part<'_>]) -> Result<String, AiError> {
     Err(AiError::Other("PhotoCraft could not find a multipart boundary that the image and mask do not contain.".into()))
 }
 
-/// The `multipart/form-data` body, with the parts in the order the protocol asks for.
+/// The `multipart/form-data` body, with the parts in the order the protocol asks for, as pieces to
+/// write one after another: each part's small header is built here, and each part's data is
+/// borrowed, never copied. Written in order, the pieces are byte for byte the body amendment 11
+/// describes.
+pub fn multipart_pieces<'a>(boundary: &str, parts: &[Part<'a>]) -> Vec<Cow<'a, [u8]>> {
+    let mut pieces = Vec::with_capacity(parts.len() * 3 + 1);
+    for part in parts {
+        let mut head = Vec::with_capacity(160);
+        head.extend_from_slice(b"--");
+        head.extend_from_slice(boundary.as_bytes());
+        head.extend_from_slice(b"\r\nContent-Disposition: form-data; name=\"");
+        head.extend_from_slice(part.name.as_bytes());
+        head.extend_from_slice(b"\"");
+        if let Some(filename) = part.filename {
+            head.extend_from_slice(b"; filename=\"");
+            head.extend_from_slice(filename.as_bytes());
+            head.extend_from_slice(b"\"");
+        }
+        head.extend_from_slice(b"\r\nContent-Type: ");
+        head.extend_from_slice(part.content_type.as_bytes());
+        head.extend_from_slice(b"\r\n\r\n");
+        pieces.push(Cow::Owned(head));
+        pieces.push(Cow::Borrowed(part.data));
+        pieces.push(Cow::Borrowed(b"\r\n".as_slice()));
+    }
+    pieces.push(Cow::Owned(format!("--{boundary}--\r\n").into_bytes()));
+    pieces
+}
+
+/// The whole body in one buffer, as PC-03 built it: the reference the pieces must equal.
+#[cfg(test)]
 pub fn multipart(boundary: &str, parts: &[Part<'_>]) -> Vec<u8> {
     let mut body = Vec::new();
     for part in parts {
@@ -183,6 +214,8 @@ pub fn parse_state(body: &[u8]) -> Result<AiJobState, AiError> {
     let message = value.get("message").and_then(Value::as_str).map(trim_sentence).filter(|text| !text.is_empty()).unwrap_or_else(|| match state {
         "queued" => "Waiting for Craft AI Manager".to_string(),
         "running" => "Craft AI Manager is working".to_string(),
+        // A failure is shown to the user as it is, so it always needs words.
+        "failed" => "Craft AI Manager could not finish the job and did not say why.".to_string(),
         _ => String::new(),
     });
     match state {
@@ -243,6 +276,19 @@ pub fn parse_tasks(body: &[u8]) -> Result<Vec<AiTask>, AiError> {
         }
     }
     Ok(out)
+}
+
+/// `GET /v1/tasks`: the `max_pixels` the manager accepts for `task`. `None` when the task is not
+/// listed or carries no usable limit (the caller then uses the engine's default).
+pub fn parse_max_pixels(body: &[u8], task: AiTask) -> Result<Option<u64>, AiError> {
+    let value = json_body(body, "a task list")?;
+    let tasks = value.get("tasks").and_then(Value::as_array).ok_or_else(|| AiError::Other("Craft AI Manager did not send its list of tasks.".into()))?;
+    Ok(tasks
+        .iter()
+        .find(|entry| entry.get("id").and_then(Value::as_str) == Some(task.id()))
+        .and_then(|entry| entry.get("max_pixels"))
+        .and_then(Value::as_u64)
+        .filter(|limit| *limit > 0))
 }
 
 /// The `{"error": "<plain sentence>"}` body the protocol defines, or a plain fallback.

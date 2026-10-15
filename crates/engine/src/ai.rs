@@ -98,6 +98,47 @@ pub trait AiProvider: Send + Sync {
     fn poll(&self, id: &AiJobId) -> Result<AiJobState, AiError>;
     fn result(&self, id: &AiJobId) -> Result<AiResult, AiError>;
     fn cancel(&self, id: &AiJobId) -> Result<(), AiError>;
+    /// The largest window (in pixels) the provider accepts for `task`, when it says so cheaply.
+    /// `Ok(None)` means "not advertised": callers use [`DEFAULT_MAX_PIXELS`]. Called on a job
+    /// worker before any pixels are read, so an unreachable provider fails before the slow part.
+    fn max_pixels(&self, task: AiTask) -> Result<Option<u64>, AiError> {
+        let _ = task;
+        Ok(None)
+    }
+}
+
+/// The window limit when a provider does not advertise one: Craft AI Manager's `max_pixels`.
+pub const DEFAULT_MAX_PIXELS: u64 = 64_000_000;
+
+/// How many poll errors in a row a job survives: a manager busy writing a result can miss one
+/// read, and that should not throw the job away (the third in a row fails it).
+pub const POLL_ERRORS_TOLERATED: usize = 2;
+
+/// Refuse a window over `max_pixels` with a sentence, before anything is read or encoded.
+pub fn check_window_pixels(window: Rect, max_pixels: u64) -> Result<(), AiError> {
+    let pixels = window.size().area();
+    if pixels > max_pixels {
+        let (size, limit) = if max_pixels >= 1_000_000 {
+            // Round the size up and the limit down, so the sentence never reads "64.0 over 64".
+            let size = (pixels as f64 / 100_000.0).ceil() / 10.0;
+            let limit = (max_pixels as f64 / 1_000_000.0).floor();
+            (format!("{size:.1} megapixels"), format!("{limit:.0} megapixels"))
+        } else {
+            (format!("{pixels} pixels"), format!("{max_pixels} pixels"))
+        };
+        return Err(AiError::Other(format!("The area to fill is {size}, over the {limit} Craft AI Manager accepts; select a smaller area.")));
+    }
+    Ok(())
+}
+
+/// The window an AI fill sends (SPEC amendment 16): the selection's bounding box `hb` plus
+/// padding of max(32 px, 25% of the box's longer side), clamped to the `canvas`. This is not
+/// Content-Aware Fill's sampling window, which grows with the square root of the area.
+pub fn fill_window(hb: Rect, canvas: Rect) -> Rect {
+    let longer = hb.width().max(hb.height());
+    let pad = (longer.saturating_add(3) / 4).max(32);
+    let pad = i32::try_from(pad).unwrap_or(i32::MAX);
+    hb.inflate(pad).intersect(&canvas)
 }
 
 fn sample_count(window: Rect, format: PixelFormat) -> Result<(usize, usize), AiError> {
@@ -127,21 +168,57 @@ impl AiRequest {
 /// Submit and wait on a worker thread. Zero poll interval supports deterministic fast tests.
 /// Native waits check cancellation at least every 10 ms. On wasm pending jobs return an
 /// unsupported error (and request cancellation), since blocking polling cannot yield to JS.
+///
+/// Once the provider has the job, every way of failing (poll errors past
+/// [`POLL_ERRORS_TOLERATED`], a failed job, a bad or failed result) also cancels it there (best
+/// effort), so failed jobs do not pile up in the provider's queue. The provider's progress is
+/// mapped onto what is left of the job's progress, so the bar never stalls or jumps back.
 pub fn run_to_completion(provider: &dyn AiProvider, req: &AiRequest, ctx: &crate::jobs::JobCtx, poll_every: Duration) -> Result<AiResult, AiError> {
     if ctx.cancelled() {
         return Err(AiError::Cancelled);
     }
     req.validate()?;
     let id = provider.submit(req)?;
+    let outcome = wait_for(provider, req, &id, ctx, poll_every);
+    // A cancel (ours, or the provider's own) has already been handled; anything else after the
+    // submit leaves a job behind unless it is cancelled here.
+    if let Err(error) = &outcome
+        && *error != AiError::Cancelled
+    {
+        let _ = provider.cancel(&id);
+    }
+    outcome
+}
+
+fn wait_for(provider: &dyn AiProvider, req: &AiRequest, id: &AiJobId, ctx: &crate::jobs::JobCtx, poll_every: Duration) -> Result<AiResult, AiError> {
+    let start = ctx.fraction();
+    let mut poll_errors = 0usize;
     loop {
-        check_cancel(provider, &id, ctx)?;
-        let state = provider.poll(&id);
-        check_cancel(provider, &id, ctx)?;
-        match state? {
-            AiJobState::Queued { progress, message } | AiJobState::Running { progress, message } => ctx.progress(progress, &message),
-            AiJobState::Done => {
-                let result = provider.result(&id);
-                check_cancel(provider, &id, ctx)?;
+        check_cancel(provider, id, ctx)?;
+        let state = provider.poll(id);
+        check_cancel(provider, id, ctx)?;
+        let state = match state {
+            Ok(state) => {
+                poll_errors = 0;
+                Some(state)
+            }
+            Err(error) => {
+                poll_errors += 1;
+                if poll_errors > POLL_ERRORS_TOLERATED {
+                    return Err(error);
+                }
+                None
+            }
+        };
+        match state {
+            None => {}
+            Some(AiJobState::Queued { progress, message } | AiJobState::Running { progress, message }) => {
+                let progress = if progress.is_finite() { progress.clamp(0.0, 1.0) } else { 0.0 };
+                ctx.progress(start + (1.0 - start) * progress, &message);
+            }
+            Some(AiJobState::Done) => {
+                let result = provider.result(id);
+                check_cancel(provider, id, ctx)?;
                 let result = result?;
                 if result.window != req.window || result.format != req.format || result.pixels.len() != req.pixels.len() {
                     return Err(AiError::Other("The AI result size or format does not match the requested window".into()));
@@ -149,14 +226,17 @@ pub fn run_to_completion(provider: &dyn AiProvider, req: &AiRequest, ctx: &crate
                 ctx.progress(1.0, "AI job complete");
                 return Ok(result);
             }
-            AiJobState::Failed(message) => return Err(AiError::Other(message)),
-            AiJobState::Cancelled => return Err(AiError::Cancelled),
+            Some(AiJobState::Failed(message)) if message.trim().is_empty() => {
+                return Err(AiError::Other("The AI job failed without saying why.".into()));
+            }
+            Some(AiJobState::Failed(message)) => return Err(AiError::Other(message)),
+            Some(AiJobState::Cancelled) => return Err(AiError::Cancelled),
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
             let mut remaining = poll_every;
             while !remaining.is_zero() {
-                check_cancel(provider, &id, ctx)?;
+                check_cancel(provider, id, ctx)?;
                 let step = remaining.min(Duration::from_millis(10));
                 std::thread::sleep(step);
                 remaining = remaining.saturating_sub(step);
@@ -165,7 +245,6 @@ pub fn run_to_completion(provider: &dyn AiProvider, req: &AiRequest, ctx: &crate
         #[cfg(target_arch = "wasm32")]
         {
             let _ = poll_every;
-            let _ = provider.cancel(&id);
             return Err(AiError::Other("Waiting for an AI provider is not available in the web build".into()));
         }
     }

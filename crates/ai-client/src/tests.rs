@@ -11,8 +11,8 @@ use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest,
 use photocraft_geom::Rect;
 
 use crate::fake_server::{FakeServer, response};
-use crate::pixels;
-use crate::provider::CaimProvider;
+use crate::provider::{CaimProvider, TOKEN_MISMATCH};
+use crate::{http, pixels, protocol};
 
 static COUNTER: AtomicU64 = AtomicU64::new(1);
 
@@ -331,7 +331,7 @@ fn a_wrong_token_says_to_restart_the_manager() {
     let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-wrong"));
     server.queue_json(401, r#"{"error": "that token is not mine"}"#);
     let error = endpoint.provider().submit(&request(2, 2, RGB8)).expect_err("401 should fail the job");
-    assert_eq!(error.to_string(), "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager");
+    assert_eq!(error.to_string(), "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.");
 }
 
 #[test]
@@ -473,7 +473,9 @@ fn non_rgb_documents_are_refused_before_any_request() {
 #[test]
 fn a_request_that_does_not_match_its_window_is_refused() {
     let server = FakeServer::start();
-    let provider = TempEndpoint::new(&endpoint_json(server.port(), "tok-shape")).provider();
+    // Kept alive: the provider reads the file before it encodes (BF-02 P4).
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-shape"));
+    let provider = endpoint.provider();
     let mut short = request(4, 3, RGB8);
     short.pixels.pop();
     assert!(provider.submit(&short).is_err(), "too few samples for the window");
@@ -618,4 +620,221 @@ fn provenance_that_disagrees_with_the_window_is_refused() {
     server.queue(response(200, "image/png", &png));
     let result = provider.result(&id).expect("a result with no provenance is still a result");
     assert_eq!((result.model.as_str(), result.device.as_str(), result.provider.as_str(), result.elapsed_ms), ("unknown", "unknown", "unknown", 0));
+}
+
+// ------------------------------------------------------------------------------------- BF-02
+
+/// A window whose PNG does not compress: an LCG, so the upload really is as big as the window.
+fn noisy_request(width: u32, height: u32) -> AiRequest {
+    let mut req = request(width, height, RGB8);
+    let mut state = 0x2545_f491_u32;
+    for sample in &mut req.pixels {
+        state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        *sample = f32::from((state >> 24) as u8) / 255.0;
+    }
+    req
+}
+
+/// X2: a manager that answers 401 after the head and closes with the body unread makes the upload
+/// fail part-way. The answer is still read and used, so the user is told to restart the manager
+/// (the common case: it restarted with a new token), not that the connection was lost.
+#[test]
+fn an_early_401_during_a_large_upload_is_reported_as_the_token_message() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-stale"));
+    // About 25 MB of PNG: far more than the loopback socket buffers hold, so the write must fail.
+    let req = noisy_request(2900, 2900);
+    server.queue_early(response(401, "application/json", br#"{"error": "That token is not this manager's."}"#));
+    let error = endpoint.provider().submit(&req).expect_err("a 401 must fail the job");
+    assert_eq!(error.to_string(), TOKEN_MISMATCH);
+    let captured = server.captured();
+    assert_eq!(captured.len(), 1);
+    assert!(captured[0].body.len() < 25_000_000, "the fake manager must not have read the whole body");
+}
+
+/// X2: the same for any status the manager sends early (413, 503): its own sentence, not "lost".
+#[test]
+fn an_early_error_reply_uses_the_manager_s_sentence() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-busy"));
+    server.queue_early(response(503, "application/json", br#"{"error": "Craft AI Manager is busy; try again in a moment."}"#));
+    let error = endpoint.provider().submit(&noisy_request(2900, 2900)).expect_err("a 503 must fail the job");
+    assert_eq!(error.to_string(), "Craft AI Manager is busy; try again in a moment.");
+}
+
+/// P4: the endpoint file is read before the image is encoded. The window holds a NaN, which the
+/// encoder refuses ("not a number"); with no endpoint the answer is "isn't running", so the encoder
+/// was never reached. With an endpoint, the same request does reach the encoder.
+#[test]
+fn with_no_endpoint_the_image_is_never_encoded() {
+    let mut req = request(64, 64, RGB8);
+    req.pixels[0] = f32::NAN;
+    let error = TempEndpoint::missing().provider().submit(&req).expect_err("no manager");
+    assert_eq!(error, AiError::NoProvider);
+    assert_eq!(error.to_string(), "Craft AI Manager isn't running");
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-order"));
+    let error = endpoint.provider().submit(&req).expect_err("a NaN cannot be encoded");
+    assert!(error.to_string().contains("not a number"), "{error}");
+    assert_eq!(server.capture_count(), 0);
+}
+
+/// P5: the multipart body is written piece by piece. The pieces are byte for byte the body PC-03
+/// built in one buffer, and the image and mask are borrowed, not copied.
+#[test]
+fn the_multipart_pieces_equal_the_old_body_and_borrow_the_parts() {
+    let job = br#"{"task": "fill_masked_area"}"#.to_vec();
+    let image = vec![0x89u8; 70_000];
+    let mask = vec![7u8; 333];
+    let parts = [
+        protocol::Part { name: "job", filename: Some("job.json"), content_type: "application/json", data: &job },
+        protocol::Part { name: "image", filename: Some("image.png"), content_type: "image/png", data: &image },
+        protocol::Part { name: "mask", filename: None, content_type: "image/png", data: &mask },
+    ];
+    let boundary = protocol::boundary(&parts).expect("a boundary");
+    let pieces = protocol::multipart_pieces(&boundary, &parts);
+    assert_eq!(pieces.concat(), protocol::multipart(&boundary, &parts), "the bytes on the wire are unchanged");
+    for data in [&job[..], &image[..], &mask[..]] {
+        let borrowed = pieces.iter().any(|piece| matches!(piece, std::borrow::Cow::Borrowed(b) if b.as_ptr() == data.as_ptr() && b.len() == data.len()));
+        assert!(borrowed, "a part of {} bytes was copied instead of borrowed", data.len());
+    }
+}
+
+/// P5: what a real submit puts on the wire is exactly the reference multipart body of its parts.
+#[test]
+fn the_uploaded_body_is_the_reference_multipart_body() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-wire"));
+    let req = request(5, 4, RGBA8);
+    server.queue_json(202, r#"{"id": "job-wire"}"#);
+    endpoint.provider().submit(&req).expect("the job should be accepted");
+    let post = &server.captured()[0];
+    let boundary = header_value(post.header("content-type")).expect("a boundary");
+    let parts = multipart_parts(&post.body, &boundary);
+    let rebuilt = protocol::multipart(
+        &boundary,
+        &[
+            protocol::Part { name: "job", filename: Some("job.json"), content_type: "application/json", data: &parts[0].1 },
+            protocol::Part { name: "image", filename: Some("image.png"), content_type: "image/png", data: &parts[1].1 },
+            protocol::Part { name: "mask", filename: Some("mask.png"), content_type: "image/png", data: &parts[2].1 },
+        ],
+    );
+    assert_eq!(post.body, rebuilt);
+    assert_eq!(post.header("content-length"), Some(&rebuilt.len().to_string()[..]));
+}
+
+/// P5: a body over 1 GiB is refused before connecting (the pieces here share one 64 MiB buffer).
+#[test]
+fn a_body_over_one_gib_is_refused_before_anything_is_sent() {
+    let server = FakeServer::start();
+    let chunk = vec![0u8; 64 * 1024 * 1024];
+    let body: Vec<&[u8]> = std::iter::repeat_n(&chunk[..], 17).collect();
+    let endpoint = crate::Endpoint::loopback(server.port(), "tok-big");
+    let error = http::request(&endpoint, "POST", "/v1/jobs", Some("multipart/form-data; boundary=x"), &body, 1024).err().expect("over 1 GiB");
+    assert!(error.to_string().contains("1 GiB"), "{error}");
+    assert_eq!(server.capture_count(), 0, "nothing was sent");
+    assert_eq!(http::body_length(&body[..16]).expect("exactly 1 GiB is allowed"), http::MAX_REQUEST_BODY_BYTES);
+}
+
+/// P2: the manager's `max_pixels` is read from `/v1/tasks`.
+#[test]
+fn max_pixels_comes_from_the_task_list() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-limit"));
+    let provider = endpoint.provider();
+    server.queue_json(
+        200,
+        r#"{"tasks": [{"id": "select_subject", "max_pixels": 5}, {"id": "fill_masked_area", "needs_prompt": false, "max_pixels": 64000000}]}"#,
+    );
+    assert_eq!(provider.max_pixels(AiTask::FillMaskedArea), Ok(Some(64_000_000)));
+    server.queue_json(200, r#"{"tasks": [{"id": "fill_masked_area"}]}"#);
+    assert_eq!(provider.max_pixels(AiTask::FillMaskedArea), Ok(None), "no limit advertised");
+    server.queue_json(401, r#"{"error": "no"}"#);
+    assert_eq!(provider.max_pixels(AiTask::FillMaskedArea).expect_err("stale token").to_string(), TOKEN_MISMATCH);
+    assert_eq!(TempEndpoint::missing().provider().max_pixels(AiTask::FillMaskedArea), Err(AiError::NoProvider));
+    let calls = server.captured();
+    assert!(calls.iter().all(|call| (call.method.as_str(), call.path.as_str()) == ("GET", "/v1/tasks")), "{calls:?}");
+}
+
+/// P2 end to end: Generative Fill asks the manager's limit first and refuses an over-limit window
+/// with a sentence before any pixel is uploaded.
+#[test]
+fn generative_fill_refuses_a_window_over_the_manager_s_limit_before_uploading() {
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-e2e"));
+    let mut s = photocraft_engine::Session::new();
+    s.execute("file.new", serde_json::json!({"width": 64, "height": 48, "background": "white"})).expect("a document");
+    s.execute("select.rect", serde_json::json!({"x": 26, "y": 16, "width": 12, "height": 14})).expect("a selection");
+    s.set_ai_provider(Some(std::sync::Arc::new(endpoint.provider())));
+    server.queue_json(200, r#"{"tasks": [{"id": "fill_masked_area", "needs_prompt": false, "max_pixels": 1000}]}"#);
+    let error = s.execute("edit.generativeFill", serde_json::json!({})).expect_err("over the manager's limit");
+    assert!(error.to_string().contains("over the 1000 pixels Craft AI Manager accepts"), "{error}");
+    let calls: Vec<(String, String)> = server.captured().into_iter().map(|call| (call.method, call.path)).collect();
+    assert_eq!(calls, vec![("GET".to_string(), "/v1/tasks".to_string())], "nothing was uploaded");
+}
+
+/// P3 end to end: after the manager took a job, three poll errors in a row fail it and PhotoCraft
+/// tells the manager to drop the job (DELETE), so failed jobs do not fill its queue.
+#[test]
+fn a_job_that_fails_after_submit_is_deleted_on_the_manager() {
+    use photocraft_engine::ai::run_to_completion;
+    use photocraft_engine::jobs::JobCtx;
+    let server = FakeServer::start();
+    let endpoint = TempEndpoint::new(&endpoint_json(server.port(), "tok-cleanup"));
+    let provider = endpoint.provider();
+    server.queue_json(202, r#"{"id": "job-gone"}"#);
+    for _ in 0..3 {
+        server.queue_json(500, r#"{"error": "The manager tripped."}"#);
+    }
+    server.queue(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n".to_vec());
+    let error = run_to_completion(&provider, &request(4, 3, RGB8), &JobCtx::new(), std::time::Duration::ZERO).expect_err("three poll errors in a row");
+    assert_eq!(error.to_string(), "The manager tripped.");
+    let calls: Vec<(String, String)> = server.captured().into_iter().map(|call| (call.method, call.path)).collect();
+    assert_eq!(calls.len(), 5, "{calls:?}");
+    assert_eq!(calls[4], ("DELETE".to_string(), "/v1/jobs/job-gone".to_string()));
+
+    // A failed result is cleaned up the same way, and two poll errors in a row are survived.
+    server.queue_json(202, r#"{"id": "job-flaky"}"#);
+    server.queue_json(500, r#"{"error": "blip"}"#);
+    server.queue_json(500, r#"{"error": "blip"}"#);
+    server.queue_json(200, DONE);
+    server.queue_json(404, r#"{"error": "The result has expired."}"#);
+    server.queue(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n".to_vec());
+    let error = run_to_completion(&provider, &request(4, 3, RGB8), &JobCtx::new(), std::time::Duration::ZERO).expect_err("the result failed");
+    assert_eq!(error.to_string(), "The result has expired.");
+    let calls: Vec<(String, String)> = server.captured().into_iter().skip(5).map(|call| (call.method, call.path)).collect();
+    assert_eq!(calls.len(), 6, "{calls:?}");
+    assert_eq!(calls[4], ("GET".to_string(), "/v1/jobs/job-flaky/result".to_string()));
+    assert_eq!(calls[5], ("DELETE".to_string(), "/v1/jobs/job-flaky".to_string()));
+}
+
+/// P7: a failed job without a message still gives the user a sentence.
+#[test]
+fn a_failed_job_without_a_message_gives_a_sentence() {
+    for body in [r#"{"state": "failed"}"#, r#"{"state": "failed", "message": ""}"#, r#"{"state": "failed", "message": "  \u0007 "}"#] {
+        let state = protocol::parse_state(body.as_bytes()).expect("a failed job is a state");
+        assert_eq!(state, AiJobState::Failed("Craft AI Manager could not finish the job and did not say why.".into()), "{body}");
+    }
+}
+
+/// P7: the image and mask PNGs use fast compression (loopback: speed over size).
+#[test]
+fn pngs_are_encoded_with_fast_compression() {
+    let req = noisy_request(97, 61);
+    let png = pixels::encode_image(&req.pixels, RGB8, 97, 61).expect("the window encodes");
+    let raw: Vec<u8> = req.pixels.iter().map(|value| (value * 255.0 + 0.5) as u8).collect();
+    let reference = |compression: png::Compression| {
+        let mut out = Vec::new();
+        let mut encoder = png::Encoder::new(&mut out, 97, 61);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder.set_compression(compression);
+        let mut writer = encoder.write_header().expect("header");
+        writer.write_image_data(&raw).expect("data");
+        writer.finish().expect("finish");
+        out
+    };
+    assert_ne!(reference(png::Compression::Fast), reference(png::Compression::Balanced), "the check below can tell them apart");
+    assert_eq!(png, reference(png::Compression::Fast));
+    assert!(matches!(pixels::PNG_COMPRESSION, png::Compression::Fast));
 }

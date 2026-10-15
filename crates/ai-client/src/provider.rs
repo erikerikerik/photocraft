@@ -19,6 +19,9 @@ use crate::protocol;
 /// caller that stopped tracking jobs must not grow the map forever.
 const MAX_TRACKED_JOBS: usize = 16;
 
+/// The answer to a 401: the manager restarted (new token) since the endpoint file was read.
+pub const TOKEN_MISMATCH: &str = "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.";
+
 /// What a job needs to be polled, fetched and cancelled: the manager it went to, and the window it
 /// described. The endpoint is kept with the job because the token changes on every manager start.
 #[derive(Clone, Debug)]
@@ -70,7 +73,7 @@ impl CaimProvider {
         method: &str,
         path: &str,
         content_type: Option<&str>,
-        body: &[u8],
+        body: &[&[u8]],
         max_body_bytes: usize,
     ) -> Result<http::Reply, AiError> {
         let reply = http::request(endpoint, method, path, content_type, body, max_body_bytes)?;
@@ -78,7 +81,7 @@ impl CaimProvider {
             return Ok(reply);
         }
         if reply.status == 401 {
-            return Err(AiError::Other("Craft AI Manager refused the request (token mismatch); restart Craft AI Manager".into()));
+            return Err(AiError::Other(TOKEN_MISMATCH.into()));
         }
         Err(AiError::Other(protocol::error_sentence(reply.status, &reply.body)))
     }
@@ -122,12 +125,16 @@ impl AiProvider for CaimProvider {
 
     fn submit(&self, req: &AiRequest) -> Result<AiJobId, AiError> {
         req.validate()?;
+        // The cheap checks first: a document the manager cannot handle fails without a file read.
         let size = req.window.size();
-        // Encode before connecting: a document the manager cannot handle should fail without a
-        // network round trip, and every size is checked before anything large is allocated.
         let channels = pixels::channels(req.format)?;
         let depth = pixels::bit_depth(req.format);
         let job = protocol::job_json(req, depth, channels as u8)?;
+        // Then the endpoint file, before anything is encoded (re-read every time: a manager that
+        // restarted has a new port and a new token). Without a manager there is nothing to encode
+        // for, and encoding a big window takes seconds and hundreds of megabytes. Every size is
+        // checked before anything large is allocated.
+        let endpoint = self.endpoint()?;
         let image = pixels::encode_image(&req.pixels, req.format, size.width, size.height)?;
         let mask = pixels::encode_mask(&req.coverage, size.width, size.height)?;
         let parts = [
@@ -136,9 +143,9 @@ impl AiProvider for CaimProvider {
             protocol::Part { name: "mask", filename: Some("mask.png"), content_type: "image/png", data: &mask },
         ];
         let boundary = protocol::boundary(&parts)?;
-        let body = protocol::multipart(&boundary, &parts);
-        // Re-read the file every time: a manager that restarted has a new port and a new token.
-        let endpoint = self.endpoint()?;
+        // The parts are written in sequence, not concatenated: the image is never copied again.
+        let pieces = protocol::multipart_pieces(&boundary, &parts);
+        let body: Vec<&[u8]> = pieces.iter().map(AsRef::as_ref).collect();
         let content_type = format!("multipart/form-data; boundary={boundary}");
         let reply = self.call(&endpoint, "POST", "/v1/jobs", Some(&content_type), &body, http::MAX_JSON_BODY_BYTES)?;
         let id = protocol::parse_job_id(&reply.body)?;
@@ -194,5 +201,14 @@ impl AiProvider for CaimProvider {
         let path = protocol::job_path(id.as_str())?;
         self.call(&record.endpoint, "DELETE", &path, None, &[], http::MAX_JSON_BODY_BYTES)?;
         Ok(())
+    }
+
+    /// `GET /v1/tasks` (one small loopback call): the manager's `max_pixels` for `task`. This is
+    /// also the first contact of a job, so a manager that isn't running is found out before the
+    /// engine reads a single pixel.
+    fn max_pixels(&self, task: AiTask) -> Result<Option<u64>, AiError> {
+        let endpoint = self.endpoint()?;
+        let reply = self.get(&endpoint, "/v1/tasks", http::MAX_JSON_BODY_BYTES)?;
+        protocol::parse_max_pixels(&reply.body, task)
     }
 }
