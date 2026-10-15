@@ -2,6 +2,16 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-14 (end of day): Claude
+
+**Done today:** SY-01 (upstream 0.9.0), PC-04, MG-00, MG-01, MG-02, MG-04 (+MG-05), all reviewed and merged. Craft AI Manager runs real LaMa on the CPU; PhotoCraft's CLI gets a "Generative Fill" layer from it (1.6 s per fill after the first). CI green on both repos.
+
+**Process changes:** `agents/tools/run-task.ps1 <task>` starts a task in one command (network on); Erik says "<task> done" instead of pasting reports; SPEC 15 now lets Claude merge its own test-only/CI fixes. Erik asked Claude to keep reviews lean and leave ~20% of each usage window free.
+
+**Tomorrow:**
+1. `run-task.ps1 pc-06` (PC-05 + PC-06 + a real golden photo; optional: Erik's own photo at `E:\CraftML\work\inputs\golden.jpg`). Then Erik's five-minute hands-on check closes Milestone 1.
+2. Open for Erik: CN-00 (fine-grained token + `gh`), Strata restart for 1920 MiB, decisions D4–D7. SY-01 next due 2026-10-21.
+
 ## 2026-10-14: Claude (MG-04 review and merge, PC-06 prompt)
 
 - MG-04 (with MG-05) approved and merged into CAIM `main`: real LaMa on the CPU, 1.6 s per fill after the first. Clean networked build confirmed on Linux; Windows via CI.
