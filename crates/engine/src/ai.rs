@@ -181,9 +181,10 @@ impl AiRequest {
 /// unsupported error (and request cancellation), since blocking polling cannot yield to JS.
 ///
 /// Once the provider has the job, every way of failing (poll errors past
-/// [`POLL_ERRORS_TOLERATED`], a failed job, a bad or failed result) also cancels it there (best
-/// effort), so failed jobs do not pile up in the provider's queue. The provider's progress is
-/// mapped onto what is left of the job's progress, so the bar never stalls or jumps back.
+/// [`POLL_ERRORS_TOLERATED`], a failed job, a result that fails validation (window, format, size,
+/// or non-finite pixels)) also cancels it there (best effort), so failed jobs do not pile up in the
+/// provider's queue. The provider's progress is mapped onto what is left of the job's progress, so
+/// the bar never stalls or jumps back.
 pub fn run_to_completion(provider: &dyn AiProvider, req: &AiRequest, ctx: &crate::jobs::JobCtx, poll_every: Duration) -> Result<AiResult, AiError> {
     if ctx.cancelled() {
         return Err(AiError::Cancelled);
@@ -233,6 +234,11 @@ fn wait_for(provider: &dyn AiProvider, req: &AiRequest, id: &AiJobId, ctx: &crat
                 let result = result?;
                 if result.window != req.window || result.format != req.format || result.pixels.len() != req.pixels.len() {
                     return Err(AiError::Other("The AI result size or format does not match the requested window".into()));
+                }
+                // Provider pixels are outside our input: one NaN or inf would silently corrupt the
+                // layer, so the whole result is rejected here, where the caller still cancels the job.
+                if result.pixels.iter().any(|v| !v.is_finite()) {
+                    return Err(AiError::Other("The AI result contains invalid pixel values".into()));
                 }
                 ctx.progress(1.0, "AI job complete");
                 return Ok(result);

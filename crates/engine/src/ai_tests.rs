@@ -223,6 +223,7 @@ fn ai_every_error_after_submit_cancels_the_job_on_the_provider() {
         ("failed job", FakeProvider { fail: Some("The model ran out of memory".into()), ..Default::default() }),
         ("wrong size", FakeProvider { wrong_size: true, ..Default::default() }),
         ("wrong window", FakeProvider { wrong_window: true, ..Default::default() }),
+        ("invalid pixels in the result", FakeProvider { bad_pixel: true, ..Default::default() }),
         ("cancel fails too", FakeProvider { call_error: Some("result"), cancel_fails: true, ..Default::default() }),
     ];
     for (what, p) in cases {

@@ -112,12 +112,10 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
                 client_version: format!("photocraft/{}", crate::build_info::VERSION),
             };
             ctx.progress(0.1, "Waiting for Craft AI Manager");
+            // run_to_completion validates the result (window, format, size, finite pixels) and cancels
+            // the job on the provider when it does not pass, so a bad result reaches neither the document
+            // nor the provider's queue.
             let result = ai::run_to_completion(provider.as_ref(), &req, ctx, POLL_EVERY).map_err(EngineError::from)?;
-            // Provider pixels are outside our input: one NaN or inf would silently corrupt the
-            // layer, so the whole result is rejected instead.
-            if result.pixels.iter().any(|v| !v.is_finite()) {
-                return Err(EngineError::Other("The AI result contains invalid pixel values; the document is unchanged".into()));
-            }
             ctx.progress(1.0, LABEL);
             let ai = provenance(&result);
             Ok((FilledWindow { filled: result.pixels, bounds, original, cover, n_hole }, ai))

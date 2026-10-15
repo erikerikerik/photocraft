@@ -34,8 +34,11 @@ fn blob_session(depth: u32) -> Session {
     s
 }
 
-fn use_provider(s: &mut Session, provider: FakeProvider) {
-    s.set_ai_provider(Some(Arc::new(provider)));
+/// Install `provider` and hand back a handle on it, so a test can read what the provider saw.
+fn use_provider(s: &mut Session, provider: FakeProvider) -> Arc<FakeProvider> {
+    let provider = Arc::new(provider);
+    s.set_ai_provider(Some(provider.clone()));
+    provider
 }
 
 fn active_id(s: &Session) -> LayerId {
@@ -265,14 +268,14 @@ fn a_bad_provider_result_is_an_error_and_the_document_is_unchanged() {
         (FakeProvider { fail: Some("The model ran out of memory".into()), ..Default::default() }, "The model ran out of memory"),
         (FakeProvider { wrong_size: true, ..Default::default() }, "does not match the requested window"),
         (FakeProvider { wrong_format: true, ..Default::default() }, "does not match the requested window"),
-        (FakeProvider { bad_pixel: true, ..Default::default() }, "The AI result contains invalid pixel values; the document is unchanged"),
+        (FakeProvider { bad_pixel: true, ..Default::default() }, "The AI result contains invalid pixel values"),
     ];
     for (provider, want) in cases {
         let mut s = blob_session(8);
         let base = active_id(&s);
         let before = snapshot(&s, base);
         let (layers, steps) = (s.active().unwrap().doc.layer_count(), s.active().unwrap().history.past_len());
-        use_provider(&mut s, provider);
+        let provider = use_provider(&mut s, provider);
         let e = s.execute(CMD, json!({})).unwrap_err();
         assert!(e.to_string().contains(want), "{want}: {e}");
         let st = s.active().unwrap();
@@ -280,6 +283,8 @@ fn a_bad_provider_result_is_an_error_and_the_document_is_unchanged() {
         assert_eq!(st.history.past_len(), steps, "{want}: history changed");
         assert_eq!(snapshot(&s, base), before, "{want}: the source layer changed");
         assert!(named(&s, "Generative Fill").is_none(), "{want}: the layer was named anyway");
+        // The provider took the job, so it must be told to drop it, exactly once.
+        assert_eq!(provider.state.lock().unwrap().cancels, 1, "{want}: the job must be cancelled on the provider exactly once");
     }
 }
 
