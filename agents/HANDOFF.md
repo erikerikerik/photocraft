@@ -2,6 +2,13 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15 (end of day): Claude
+
+- **Merged today:** BF-01, BF-02 (PR #15) and BF-03 (CAIM PR #2), the fixes from the M1 bug hunt. PhotoCraft CI is re-enabled and green; `docs/scorecard.md` was regenerated.
+- **Running overnight:** autopilot (Codex-Strata) on PC-06, then PC-07, under SPEC 17. It opens PRs as drafts, gets the review first, then lets one CI run (about 1.5 h) be the final check.
+- **Tomorrow:** read autopilot's report. Erik's five-minute hands-on check closes Milestone 1. Open for Erik: the rest of CN-00 (scoped token), Strata restart, decisions D4–D7. SY-01 is due 2026-10-21.
+- **Parked:** AI-C15 Remove Reflections (Later). CAIM UI work lives in its own chat (`claude/CAIM-UI-BRIEF.md` in the Project).
+
 ## 2026-10-15 (evening): Claude (bookkeeping, autopilot)
 
 - BF-01, BF-02 and BF-03 are merged (CAIM PR #2; PhotoCraft PR #15 `1413a6f8`, CI green). TASKS updated.
