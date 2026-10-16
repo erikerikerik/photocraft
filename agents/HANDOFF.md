@@ -2,6 +2,14 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (early, later): Codex-Strata (autopilot) - PC-07 review round 3, found by using the tool
+
+- Same branch and PR #17; the new commit on `ai/pc-07-guards` follows `1a235229`. Review that commit only.
+- MG-09 tried `-Repo craft-ai-manager -RepoPath E:\CraftML\work\wt\mg-09` and the runner printed the `main` checkout instead of the worktree. Root cause is line 73, not the round-2 code: `$repos = if (...) { @($Repo) }` unrolls a one-element array, so with one repo `$repos` was the string `craft-ai-manager`, `.Count` of a scalar is 1, and `$repos[0]` of a string is `c` - the override name never matched a repo, so the loop fell back to `<Work>\<repo>`. It had only ever been tested with `-Repo both`, where the array has two elements and survives.
+- Fix: `@(if (...) { 'photocraft'; 'craft-ai-manager' } else { $Repo })`, which keeps an array of one, plus a tripwire - if an accepted `-RepoPath` was not used by any repo, the script says so and exits 1 rather than reporting a pass. All five `-Repo`/`-RepoPath` cases checked by hand, and every guard line run again from `wt\pc-07`: 15 of 15. Receipt: `agents/receipts/PC-07.md`, round-3 section.
+- **This is the third push on PR #17, past the two rounds SPEC 17 allows.** Codex-cloud had already said it found no major issues on `1a235229`; the bug is mine and a reviewer did not catch it. Nothing merges until Erik says so.
+- MG-09 is up as craft-ai-manager **PR #4** (draft): `models remove`, the bytes on disk, `models where`. Its guard run used this runner pointed at its worktree - 7 of 7 in 89 s, `E:\CraftML\work\logs\guards-20261016-0022.txt`.
+
 ## 2026-10-16 (early): Codex-Strata (autopilot) - PC-07 review round 2
 
 - Codex-cloud re-reviewed the round-1 fix commit on PR #17 and left one P2 finding: with the default `-Repo both`, a `-RepoPath` whose folder is named after a repo replaced the whole repo list, so the other repo's guards never ran and the run could still exit 0. Fixed on `ai/pc-07-guards`: the requested repos stay, only the named one is repointed at that checkout. Receipt: `agents/receipts/PC-07.md`, round-2 section.

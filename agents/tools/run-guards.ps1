@@ -70,7 +70,9 @@ function Get-GuardLines {
     return $lines
 }
 
-$repos = if ($Repo -eq 'both') { @('photocraft', 'craft-ai-manager') } else { @($Repo) }
+# @(if ...) rather than = if (...): a one-element array out of an if block comes back as a bare
+# string, and $repos[0] of a string is its first letter, which silently loses the -RepoPath checkout.
+$repos = @(if ($Repo -eq 'both') { 'photocraft'; 'craft-ai-manager' } else { $Repo })
 
 # Which checkout is this script sitting in? A linked worktree counts, so the guards test the changes
 # under review rather than the separate main checkout under <Work>.
@@ -103,6 +105,7 @@ if ($selfName -eq '') {
 
 # -RepoPath points one repo at another checkout; it never drops the other repos that were asked for.
 $overrideName = ''
+$usedOverride = $false
 if ($RepoPath -ne '') {
     $leaf = Split-Path -Leaf ($RepoPath.TrimEnd('\', '/'))
     if ($repos -contains $leaf) {
@@ -122,7 +125,7 @@ $guards = @()
 $missing = @()
 $resolved = @()
 foreach ($name in $repos) {
-    if ($name -eq $overrideName) { $folder = $RepoPath }
+    if ($name -eq $overrideName) { $folder = $RepoPath; $usedOverride = $true }
     elseif ($name -eq $selfName) { $folder = $selfRoot }
     else { $folder = Join-Path $Work $name }
     if (-not (Test-Path -LiteralPath (Join-Path $folder '.git'))) {
@@ -139,6 +142,11 @@ foreach ($name in $repos) {
     $resolved += ('{0}={1}' -f $name, $folder)
     Write-Host ('{0} guards run in {1}' -f $name, $folder) -ForegroundColor DarkGray
     $guards += @(Get-GuardLines -Folder $folder -RepoName $name)
+}
+
+if ($overrideName -ne '' -and -not $usedOverride) {
+    Write-Host "-RepoPath $RepoPath was not used by any repo, which is a bug in this script. Nothing was run." -ForegroundColor Red
+    exit 1
 }
 
 if ($Only -ne '') {
