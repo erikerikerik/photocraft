@@ -96,6 +96,14 @@ Artwork shown in the screenshots (all public domain, via Wikimedia Commons; deta
 | `photocraft-type.jpg` | *Among the Sierra Nevada, California*, Albert Bierstadt, 1868 | [Commons](https://commons.wikimedia.org/wiki/File:Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg) |
 | `photocraft-export-light.jpg` | *The Kiss*, Gustav Klimt, 1907–1908 | [Commons](https://commons.wikimedia.org/wiki/File:Gustav_Klimt_016.jpg) |
 
+## Agent receipts
+
+Screenshots committed under `agents/receipts/` show the app at work, so they carry the artwork they show.
+
+| Path | Title | Author | Source | License |
+|---|---|---|---|---|
+| `agents/receipts/pc-06/` (8 PNGs) | PC-06 end-to-end screenshots: the PhotoCraft canvas holds an orange mooring buoy on open water, and the Generative Fill result that replaces it | W.carter (photograph); PhotoCraft contributors (UI) | [Wikimedia Commons: Orange buoy in water.jpg](https://commons.wikimedia.org/wiki/File:Orange_buoy_in_water.jpg), fetched and cropped by Craft AI Manager (its `crates/caim/tests/fixtures/SOURCE.md` records the fetch) | CC0-1.0 (photograph), [`agents/receipts/pc-06/LICENSE-CC0.txt`](agents/receipts/pc-06/LICENSE-CC0.txt); MIT OR Apache-2.0 (UI chrome) |
+
 ## Test data (not committed, not shipped)
 
 `corpus/` is gitignored and no test fixtures are committed to the repository.
