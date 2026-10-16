@@ -2,6 +2,11 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15 (night): Claude (overnight queue)
+
+- Autopilot queue for tonight: PC-07, MG-07 (CAIM CI licence check + MSRV), MG-08 (Ctrl+C shutdown), MG-09 (models remove / disk use), then SY-02 (upstream sync). Prompts in `agents/prompts/`. Erik allowed permissive libraries and an overnight sync (SPEC 17 note).
+- PC-06 stays waiting on Erik's hands-on check; autopilot does not touch it.
+
 ## 2026-10-15 (end of day): Claude
 
 - **Merged today:** BF-01, BF-02 (PR #15) and BF-03 (CAIM PR #2), the fixes from the M1 bug hunt. PhotoCraft CI is re-enabled and green; `docs/scorecard.md` was regenerated.
