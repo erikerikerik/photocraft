@@ -33,6 +33,7 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 | [ ] | AI-C12 | Web providers with your own API key | Firefly (cloud) | S4 | L | | CAIM-08, B09 | todo | |
 | [ ] | AI-C13 | Content Credentials (C2PA): AI-made layers and exports carry a "made with AI" record (`c2pa-rs`, MIT/Apache). PhotoCraft's roadmap lists C2PA under M11 | Content Credentials | S3 | M | | AI-C07 | todo | |
 | [ ] | AI-C14 | Agent workflows: an agent combines AI tools over MCP (e.g. "remove the wires in every photo in this folder, new layer each, save as PSD"); the AI commands already work over MCP (B06), this adds tested end-to-end recipes | Actions / batch | S2 | M | | B06, PC-04 | todo | |
+| [ ] | AI-C15 | Remove reflections from glass, on device: whole image, result as a new layer; needs a model whose code, weights **and** training data pass the licence gate (amendment 13); runs through the tiled runner (CAIM-13) | Remove Reflections (Camera Raw) | Later | M | | CAIM-02, CAIM-13, a cleared model | todo | |
 
 ## 2. How it behaves
 
