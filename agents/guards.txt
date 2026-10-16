@@ -23,3 +23,5 @@ PC-05 | photocraft | cargo test -p photocraft-automation
 # The Windows PC can't run this; it is covered by CI on every PR. Check the CI run before merging.
 # BF-02 M1 bug-hunt fixes: one blend (X1), early replies (X2), window + max_pixels (P1/P2), cleanup (P3), order (P4), streaming (P5), 32-bit note (P6), nits (P7).
 BF-02 | photocraft | cargo test -p photocraft-engine --lib --tests && cargo test -p photocraft-ai-client && cargo test -p photocraft-engine --test panic_hunt -- --ignored
+# PC-07 the guard runner itself: -Repo/-RepoPath pick the right checkout, and a missing one fails the run.
+PC-07 | photocraft | powershell -NoProfile -ExecutionPolicy Bypass -File agents/tools/test-run-guards.ps1
