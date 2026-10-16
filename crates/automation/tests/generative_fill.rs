@@ -1,8 +1,9 @@
 ﻿//! PC-05: Edit … Generative Fill over MCP, with a stand-in for Craft AI Manager.
 //!
 //! `photocraft-engine`'s own `FakeProvider` is private to that crate, so this file carries its
-//! own: it fills wherever the selection covers, and either finishes after a couple of polls or
-//! never finishes at all, which is how the cancel path gets a provider that is still working.
+//! own: it fills wherever the selection covers, and either finishes after a couple of polls, never
+//! finishes at all (that is how the cancel path gets a provider that is still working), or holds
+//! until the test opens the gate, so asserting a running state never races the job worker.
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -28,6 +29,8 @@ impl ClientHandler for Client {
 struct FakeFill {
     /// Keep every poll `Running`, so a cancel is the only way the job ends.
     never_finish: bool,
+    /// Keep every poll `Running`, however often the engine polls, until the test opens the gate.
+    hold: AtomicBool,
     polls: AtomicUsize,
     /// How many times the engine asked the provider to cancel its job.
     cancels: AtomicUsize,
@@ -52,7 +55,7 @@ impl AiProvider for FakeFill {
         if self.cancelled.load(Ordering::Relaxed) {
             return Ok(AiJobState::Cancelled);
         }
-        if !self.never_finish && polls > 2 {
+        if !self.never_finish && polls > 2 && !self.hold.load(Ordering::Relaxed) {
             return Ok(AiJobState::Done);
         }
         Ok(AiJobState::Running { progress: 0.5, message: "Filling".into() })
@@ -198,7 +201,10 @@ async fn wait_on(counter: &AtomicUsize, count: usize) {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn generative_fill_over_mcp_adds_a_layer_and_one_undo_removes_it() {
-    let client = connect(mcp_with(Arc::new(FakeFill::default()))).await;
+    // The fake holds the job Running until this test opens the gate, so the three assertions
+    // on the running state cannot lose a race against the job worker.
+    let fill = Arc::new(FakeFill { hold: AtomicBool::new(true), ..Default::default() });
+    let client = connect(mcp_with(fill.clone())).await;
     doc_with_selection(&client).await;
     let before = inspect(&client).await;
     assert_eq!(layer_names(&before), ["Background"], "the new document has one layer: {before}");
@@ -210,6 +216,7 @@ async fn generative_fill_over_mcp_adds_a_layer_and_one_undo_removes_it() {
     assert_eq!(running["label"], "Generative Fill", "the job is named as D1 decided: {running}");
     assert_eq!(running["command"], "edit.generativeFill", "{running}");
 
+    fill.hold.store(false, Ordering::Relaxed);
     let done = settled_job(&client, id).await;
     assert_eq!(done["state"], "done", "{done}");
     let result = &done["result"];
