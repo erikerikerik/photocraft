@@ -31,7 +31,7 @@ They don't chat directly. **GitHub is the message board:**
 5. Run the agent with a time limit and save the output to `E:\CraftML\conductor\logs\<id>-<time>.log`:
    - owner `local` → `codex exec --profile strata …`
    - owner `Codex` → `codex exec …` (the cloud model)
-6. Run the task's test command and `agents/run-guards.ps1` itself, and write the results into the receipt. The agent's own claims don't count.
+6. Run the task's test command and `agents/tools/run-guards.ps1` itself, and write the results into the receipt. The agent's own claims don't count.
 7. Push the branch, open or update the PR, set the label.
 8. For `ai:needs-review` PRs, run Claude Code headless (`claude -p`) with the **review prompt**: the diff, the receipt, the matching SPEC and AGENTS.md rules, and the task's acceptance tests. Post its answer as a `**[claude]**` comment and set `ai:approved` or `ai:changes`.
 9. Write a status table to `E:\CraftML\conductor\status.md` (what's running, waiting, blocked, today's usage).

@@ -2,6 +2,14 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15 (night, later): Codex-Strata (autopilot) - PC-07 review round 1, and how the push works now
+
+- Codex-cloud reviewed `db2039d` on PR #17 and left five P2 findings (state `COMMENTED`, findings unresolved). All five are fixed on `ai/pc-07-guards`; a re-review of the fix commit is requested. Receipt: `agents/receipts/PC-07.md`, round-1 section.
+- What was wrong: (1) both repos were resolved from `-Work`, so a task worktree guarded `main` instead of its own changes - the script now asks git which checkout it sits in (`rev-parse --show-toplevel` and the `origin` URL, from `$PSScriptRoot`) and uses that for its own repo, with `-RepoPath <dir>` to point one repo at another checkout; (2) a missing checkout or a missing `agents/guards.txt` was a yellow shrug and exit 0 - it is now named, printed red, written into the log header, and the run exits 1; (3) `-Only BASE-1` matched that key in both repos and quietly ran two lines - it now refuses and prints the candidates, and the table and the listing gained a Repo column; (4) a guard line naming a command that does not exist counted as a pass - `Get-Command` plus try/catch make it FAIL (checked against a throwaway guards file: `definitely-not-a-real-command` and `cmd /c exit 3` both FAIL, exit 1); (5) `agents/CONDUCTOR.md` step 6 still said `agents/run-guards.ps1`.
+- Guards re-run from the branch's own checkout (`wt\pc-07`, `CARGO_TARGET_DIR=target/agent-guards`): 15 of 15 lines passed. Table in the receipt.
+- **Pushing without a Git credential helper.** New local-only helper `E:\CraftML\work\.codex-tmp\ghpush\push-via-api.ps1` puts a branch on GitHub through the Git Data API using the `gh` CLI; it never reads, passes or prints a stored credential. One limit: GitHub answers 404 for any tree that contains `.github/workflows/*`, because this `gh` token has no `workflow` scope.
+- **MG-07 is ready but blocked on that scope.** `wt\mg-07` has `deny.toml`, the `deny` and `msrv` jobs in `.github/workflows/ci.yml`, the receipt and a HANDOFF entry; gates are clean (fmt, clippy `-D warnings`, `cargo test` 206/0/2, and an offline licence pre-check of 126 packages with none outside the allow list). It cannot be pushed until the token is re-created with `workflow`. MG-08 is blocked too: the `ctrlc` crate is not in the local registry cache and crates.io is unreachable from this sandbox.
+
 ## 2026-10-15 (night): Claude (overnight queue)
 
 - Autopilot queue for tonight: PC-07, MG-07 (CAIM CI licence check + MSRV), MG-08 (Ctrl+C shutdown), MG-09 (models remove / disk use), then SY-02 (upstream sync). Prompts in `agents/prompts/`. Erik allowed permissive libraries and an overnight sync (SPEC 17 note).
