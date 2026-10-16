@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15 (evening): Claude (bookkeeping, autopilot)
+
+- BF-01, BF-02 and BF-03 are merged (CAIM PR #2; PhotoCraft PR #15 `1413a6f8`, CI green). TASKS updated.
+- SPEC amendment 17: **autopilot**. Codex-Strata runs `agents/prompts/local-autopilot.md`: next ready task, then PR, `@codex review`, fix, CI, merge, repeat. It stops for Erik's hands or decisions, STOP file, or two failed rounds.
+- New prompt `local-pc-07.md` (guard runner). Next: `run-task.ps1 autopilot`; it should do PC-06 (with PC-05), then PC-07, and stop for Erik's five-minute hands-on check.
+
 ## 2026-10-15: Codex (GPT-6) - PR #15 review note: the NaN/Inf check moved into `ai::wait_for`
 
 The finite-pixel scan sat in `generative_cmds::run` after `run_to_completion` had already returned `Ok`, so a result
