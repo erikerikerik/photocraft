@@ -2,6 +2,12 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (early): Codex-Strata (autopilot) - PC-07 review round 2
+
+- Codex-cloud re-reviewed the round-1 fix commit on PR #17 and left one P2 finding: with the default `-Repo both`, a `-RepoPath` whose folder is named after a repo replaced the whole repo list, so the other repo's guards never ran and the run could still exit 0. Fixed on `ai/pc-07-guards`: the requested repos stay, only the named one is repointed at that checkout. Receipt: `agents/receipts/PC-07.md`, round-2 section.
+- Guards re-run from the branch's own checkout after the fix: 15 of 15 lines passed in 142.7 s, log `E:\CraftML\work\logs\guards-20261016-0011.txt`.
+- A second re-review was asked for, on the new commit only. That is round 2 of the two rounds SPEC 17 allows; if Codex-cloud asks for more, autopilot stops and reports.
+
 ## 2026-10-15 (night, later): Codex-Strata (autopilot) - PC-07 review round 1, and how the push works now
 
 - Codex-cloud reviewed `db2039d` on PR #17 and left five P2 findings (state `COMMENTED`, findings unresolved). All five are fixed on `ai/pc-07-guards`; a re-review of the fix commit is requested. Receipt: `agents/receipts/PC-07.md`, round-1 section.

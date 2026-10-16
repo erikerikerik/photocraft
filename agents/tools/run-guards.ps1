@@ -8,7 +8,8 @@
   one row per line: ID, repo, command, PASS or FAIL, seconds. A line with && in it runs its parts in order
   and stops at the first failure. The table is also saved to <Work>\logs\guards-<yyyyMMdd-HHmm>.txt.
   Each repo is resolved to a checkout first: the checkout this script sits in wins for its own repo, so a
-  task worktree tests its own changes; the other repo comes from <Work>\<repo>, and -RepoPath overrides one.
+  task worktree tests its own changes; the other repo comes from <Work>\<repo>; -RepoPath points one repo at
+  another checkout and never drops the rest.
   Exit code is 1 if any guard failed or a requested repo could not run, 0 if all passed. Nothing is written
   to the repos.
 
@@ -18,6 +19,7 @@
   .\run-guards.ps1 -Only PC-03          # every line with that ID
   .\run-guards.ps1 -Only BASE-1         # one line: the first BASE line (add -Repo when both repos run)
   .\run-guards.ps1 -Repo photocraft -RepoPath E:\CraftML\work\wt\pc-07   # guards for one checkout
+  .\run-guards.ps1 -RepoPath E:\CraftML\work\wt\photocraft    # that photocraft, plus the usual CAIM one
 #>
 param(
     [ValidateSet('both', 'photocraft', 'craft-ai-manager')]
@@ -99,13 +101,16 @@ if ($selfName -eq '') {
     Write-Host "Could not tell which checkout this script sits in, so every repo comes from $Work." -ForegroundColor Yellow
 }
 
+# -RepoPath points one repo at another checkout; it never drops the other repos that were asked for.
+$overrideName = ''
 if ($RepoPath -ne '') {
     $leaf = Split-Path -Leaf ($RepoPath.TrimEnd('\', '/'))
     if ($repos -contains $leaf) {
-        $repos = @($leaf)
+        $overrideName = $leaf
     }
     elseif ($repos.Count -eq 1) {
         # -Repo already named the repo, so -RepoPath may be any checkout of it (a worktree, another clone).
+        $overrideName = $repos[0]
     }
     else {
         Write-Host "-RepoPath needs -Repo photocraft or -Repo craft-ai-manager when the folder is not named after the repo (here: $leaf)." -ForegroundColor Red
@@ -117,7 +122,7 @@ $guards = @()
 $missing = @()
 $resolved = @()
 foreach ($name in $repos) {
-    if ($RepoPath -ne '') { $folder = $RepoPath }
+    if ($name -eq $overrideName) { $folder = $RepoPath }
     elseif ($name -eq $selfName) { $folder = $selfRoot }
     else { $folder = Join-Path $Work $name }
     if (-not (Test-Path -LiteralPath (Join-Path $folder '.git'))) {
