@@ -17,6 +17,8 @@ PC-02 | photocraft | cargo test -p photocraft-engine --lib generative
 PC-03 | photocraft | cargo test -p photocraft-ai-client
 # PC-04 the client is wired into the apps: no manager -> one plain sentence, exit 1, no crash.
 PC-04 | photocraft | cargo test -p photocraft-cli
+# PC-05 the MCP automation test: Generative Fill and its cancel over MCP, with a stand-in provider.
+PC-05 | photocraft | cargo test -p photocraft-automation
 # Linux build of our crates (CI's ubuntu job caught a Linux-only compile error in PC-03, Oct 14).
 # The Windows PC can't run this; it is covered by CI on every PR. Check the CI run before merging.
 # BF-02 M1 bug-hunt fixes: one blend (X1), early replies (X2), window + max_pixels (P1/P2), cleanup (P3), order (P4), streaming (P5), 32-bit note (P6), nits (P7).
