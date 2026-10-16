@@ -4,7 +4,7 @@
 //! Nothing here trusts the reply: an over-long line, a missing or dishonest `Content-Length`, a
 //! chunked transfer, a non-UTF-8 header or a body that stops short is an error, never a panic.
 
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
@@ -35,37 +35,100 @@ impl Reply {
     }
 }
 
-/// One request, one reply, then the connection is finished. `max_body_bytes` caps the reply and is
-/// chosen per call: 64 KiB for JSON, and what the requested PNG can be for `result.png`.
-pub fn request(endpoint: &Endpoint, method: &str, path: &str, content_type: Option<&str>, body: &[u8], max_body_bytes: usize) -> Result<Reply, AiError> {
-    let mut stream = TcpStream::connect_timeout(&endpoint.addr, CONNECT_TIMEOUT).map_err(|_| AiError::NoProvider)?;
+/// Amendment 11: no request body over 1 GiB (the PNG cap; the multipart framing is tiny).
+pub const MAX_REQUEST_BODY_BYTES: usize = 1024 * 1024 * 1024;
+/// After a failed write, how long to wait for an answer the manager may already have sent.
+const EARLY_REPLY_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// One request, one reply, then the connection is finished. The body is a list of pieces written
+/// one after another (the multipart head of each part, then the part itself), so a large upload
+/// is never copied into one buffer. `max_body_bytes` caps the reply and is chosen per call: 64 KiB
+/// for JSON, and what the requested PNG can be for `result.png`.
+///
+/// A manager may answer before it has read the whole body (401 for a stale token, 413, 503) and
+/// close the connection, so the upload fails part-way. The answer is still in the socket, so it is
+/// read and used: the user gets "restart Craft AI Manager", not "lost the connection".
+pub fn request(endpoint: &Endpoint, method: &str, path: &str, content_type: Option<&str>, body: &[&[u8]], max_body_bytes: usize) -> Result<Reply, AiError> {
+    let length = body_length(body)?;
+    let stream = TcpStream::connect_timeout(&endpoint.addr, CONNECT_TIMEOUT).map_err(|_| AiError::NoProvider)?;
     if stream.set_read_timeout(Some(READ_TIMEOUT)).is_err() || stream.set_write_timeout(Some(WRITE_TIMEOUT)).is_err() {
         return Err(AiError::Other("PhotoCraft could not put a timeout on the Craft AI Manager connection.".into()));
     }
-    write_request(&mut stream, endpoint, method, path, content_type, body)?;
+    let stream = match write_request(stream, endpoint, method, path, content_type, body, length) {
+        Ok(stream) => stream,
+        Err((stream, write_error)) => {
+            // Whatever the manager said before it stopped reading is better than a broken pipe; if
+            // it said nothing (or nothing readable), the write error is the real story. Nothing goes
+            // back out before reading it: writing again to a socket the manager stopped reading
+            // resets the connection, and on Windows that throws the answer away.
+            let _ = stream.set_read_timeout(Some(EARLY_REPLY_TIMEOUT));
+            return read_reply(stream, max_body_bytes).map_err(|_| write_error);
+        }
+    };
     read_reply(stream, max_body_bytes)
 }
 
-fn write_request(stream: &mut TcpStream, endpoint: &Endpoint, method: &str, path: &str, content_type: Option<&str>, body: &[u8]) -> Result<(), AiError> {
-    let mut out = Vec::with_capacity(body.len().saturating_add(256));
-    out.extend_from_slice(method.as_bytes());
-    out.extend_from_slice(b" ");
-    out.extend_from_slice(path.as_bytes());
-    out.extend_from_slice(b" HTTP/1.1\r\n");
-    out.extend_from_slice(b"Host: ");
-    out.extend_from_slice(endpoint.host_header().as_bytes());
-    out.extend_from_slice(b"\r\nAuthorization: Bearer ");
-    out.extend_from_slice(endpoint.token.as_bytes());
-    out.extend_from_slice(b"\r\nAccept: application/json, image/png\r\nConnection: close\r\n");
+/// The total length of a body's pieces, refused over [`MAX_REQUEST_BODY_BYTES`] before anything
+/// is sent.
+pub fn body_length(body: &[&[u8]]) -> Result<usize, AiError> {
+    body.iter()
+        .try_fold(0usize, |total, piece| total.checked_add(piece.len()))
+        .filter(|total| *total <= MAX_REQUEST_BODY_BYTES)
+        .ok_or_else(|| AiError::Other("The request for Craft AI Manager is over the protocol's 1 GiB limit; select a smaller area.".into()))
+}
+
+/// The head and the body pieces, in order. The stream comes back either way, because the caller
+/// reads the reply from it even when the upload failed part-way. The buffer is taken apart with
+/// [BufWriter::into_parts] rather than dropped: dropping it would flush what is still buffered, and
+/// that second write is what loses the early reply on Windows.
+pub(crate) fn write_request<W: Write>(
+    stream: W,
+    endpoint: &Endpoint,
+    method: &str,
+    path: &str,
+    content_type: Option<&str>,
+    body: &[&[u8]],
+    length: usize,
+) -> Result<W, (W, AiError)> {
+    let mut head = Vec::with_capacity(256);
+    head.extend_from_slice(method.as_bytes());
+    head.extend_from_slice(b" ");
+    head.extend_from_slice(path.as_bytes());
+    head.extend_from_slice(b" HTTP/1.1\r\n");
+    head.extend_from_slice(b"Host: ");
+    head.extend_from_slice(endpoint.host_header().as_bytes());
+    head.extend_from_slice(b"\r\nAuthorization: Bearer ");
+    head.extend_from_slice(endpoint.token.as_bytes());
+    head.extend_from_slice(b"\r\nAccept: application/json, image/png\r\nConnection: close\r\n");
     if let Some(content_type) = content_type {
-        out.extend_from_slice(b"Content-Type: ");
-        out.extend_from_slice(content_type.as_bytes());
-        out.extend_from_slice(b"\r\n");
+        head.extend_from_slice(b"Content-Type: ");
+        head.extend_from_slice(content_type.as_bytes());
+        head.extend_from_slice(b"\r\n");
     }
-    out.extend_from_slice(format!("Content-Length: {}\r\n\r\n", body.len()).as_bytes());
-    out.extend_from_slice(body);
-    stream.write_all(&out).map_err(|error| io_error(error, true))?;
-    stream.flush().map_err(|error| io_error(error, true))
+    head.extend_from_slice(format!("Content-Length: {length}\r\n\r\n").as_bytes());
+    // Small pieces (the head, each part's header) gather in the buffer; a piece larger than the
+    // buffer goes straight to the socket, so the image is never copied.
+    let mut out = BufWriter::with_capacity(64 * 1024, stream);
+    // The error [BufWriter::into_parts] reports is the one write_all or flush just returned; the
+    // stream is the part we want back.
+    let stop = |out: BufWriter<W>, error: std::io::Error| {
+        // into_parts hands back the writer and the bytes still in its buffer; the bytes are dropped
+        // on purpose, and the error it reports is the one write_all or flush already returned.
+        let (stream, _) = out.into_parts();
+        (stream, io_error(error, true))
+    };
+    if let Err(error) = out.write_all(&head) {
+        return Err(stop(out, error));
+    }
+    for piece in body {
+        if let Err(error) = out.write_all(piece) {
+            return Err(stop(out, error));
+        }
+    }
+    match out.flush() {
+        Ok(()) => Ok(out.into_parts().0),
+        Err(error) => Err(stop(out, error)),
+    }
 }
 
 fn read_reply(stream: TcpStream, max_body_bytes: usize) -> Result<Reply, AiError> {

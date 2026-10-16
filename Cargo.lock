@@ -4671,6 +4671,7 @@ name = "photocraft-ai-client"
 version = "0.9.0"
 dependencies = [
  "photocraft-color",
+ "photocraft-compose",
  "photocraft-engine",
  "photocraft-geom",
  "png 0.18.1",

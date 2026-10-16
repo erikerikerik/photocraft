@@ -34,8 +34,11 @@ fn blob_session(depth: u32) -> Session {
     s
 }
 
-fn use_provider(s: &mut Session, provider: FakeProvider) {
-    s.set_ai_provider(Some(Arc::new(provider)));
+/// Install `provider` and hand back a handle on it, so a test can read what the provider saw.
+fn use_provider(s: &mut Session, provider: FakeProvider) -> Arc<FakeProvider> {
+    let provider = Arc::new(provider);
+    s.set_ai_provider(Some(provider.clone()));
+    provider
 }
 
 fn active_id(s: &Session) -> LayerId {
@@ -265,14 +268,14 @@ fn a_bad_provider_result_is_an_error_and_the_document_is_unchanged() {
         (FakeProvider { fail: Some("The model ran out of memory".into()), ..Default::default() }, "The model ran out of memory"),
         (FakeProvider { wrong_size: true, ..Default::default() }, "does not match the requested window"),
         (FakeProvider { wrong_format: true, ..Default::default() }, "does not match the requested window"),
-        (FakeProvider { bad_pixel: true, ..Default::default() }, "The AI result contains invalid pixel values; the document is unchanged"),
+        (FakeProvider { bad_pixel: true, ..Default::default() }, "The AI result contains invalid pixel values"),
     ];
     for (provider, want) in cases {
         let mut s = blob_session(8);
         let base = active_id(&s);
         let before = snapshot(&s, base);
         let (layers, steps) = (s.active().unwrap().doc.layer_count(), s.active().unwrap().history.past_len());
-        use_provider(&mut s, provider);
+        let provider = use_provider(&mut s, provider);
         let e = s.execute(CMD, json!({})).unwrap_err();
         assert!(e.to_string().contains(want), "{want}: {e}");
         let st = s.active().unwrap();
@@ -280,6 +283,8 @@ fn a_bad_provider_result_is_an_error_and_the_document_is_unchanged() {
         assert_eq!(st.history.past_len(), steps, "{want}: history changed");
         assert_eq!(snapshot(&s, base), before, "{want}: the source layer changed");
         assert!(named(&s, "Generative Fill").is_none(), "{want}: the layer was named anyway");
+        // The provider took the job, so it must be told to drop it, exactly once.
+        assert_eq!(provider.state.lock().unwrap().cancels, 1, "{want}: the job must be cancelled on the provider exactly once");
     }
 }
 
@@ -331,4 +336,154 @@ fn the_command_is_registered_once_under_edit() {
     assert!(specs[0].journal);
     let all = crate::command_specs();
     assert_eq!(all.iter().filter(|c| c.id == CMD).count(), 1, "registered exactly once");
+}
+
+/// BF-02 X1 / amendment 16: one blend only. A 50%-coverage pixel ends up exactly halfway between
+/// the original and the fill in the composited document (before, the provider and the layer alpha
+/// both blended, so it got a quarter of the fill).
+#[test]
+fn a_half_selected_pixel_composites_halfway_between_original_and_fill() {
+    for depth in [8, 16, 32] {
+        let mut s = doc_session(depth, "rgb");
+        // A black canvas, so "halfway to the 0.75 grey" is 0.375 in every channel.
+        s.edit("black", |doc, active| {
+            let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
+            surf.fill_rect(Rect::new(0, 0, 64, 48), &[0.0, 0.0, 0.0, 1.0]);
+            // A hard 12 x 14 selection with one ring of 50% coverage around a fully selected core.
+            let sel = doc.selection.as_mut().unwrap();
+            sel.fill_rect(Rect::new(26, 16, 38, 30), &[0.5]);
+            sel.fill_rect(Rect::new(27, 17, 37, 29), &[1.0]);
+            Ok(())
+        })
+        .unwrap();
+        let half = s.active().unwrap().doc.selection.as_ref().unwrap().pixel(26, 20)[0];
+        assert!((half - 0.5).abs() < 1.0 / 255.0, "{depth}-bit: the fixture's edge is 50% selected: {half}");
+        use_provider(&mut s, FakeProvider::default());
+        s.execute(CMD, json!({})).unwrap();
+        let doc = s.active().unwrap().doc.clone();
+        let composite = photocraft_compose::render(&doc, Rect::new(0, 0, 64, 48));
+        let at = |x: i32, y: i32| composite.px[(y * 64 + x) as usize];
+        let (original, fill) = (0.0f32, 0.75f32);
+        for c in 0..3 {
+            let edge = at(26, 20)[c];
+            assert!((edge - (original + fill) / 2.0).abs() <= 1.0 / 255.0, "{depth}-bit: 50% coverage gives {edge}, want halfway (0.375)");
+            assert!((at(32, 23)[c] - fill).abs() <= 1.0 / 255.0, "{depth}-bit: full coverage is the fill");
+            assert!((at(10, 10)[c] - original).abs() <= 1.0 / 255.0, "{depth}-bit: unselected pixels are the original");
+        }
+    }
+}
+
+/// BF-02 P1: the provider is sent the selection's bounds plus padding, clamped to the canvas, not
+/// Content-Aware Fill's sampling window.
+#[test]
+fn the_window_sent_is_the_selection_bounds_plus_padding() {
+    let mut s = Session::new();
+    s.execute("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
+    s.execute("select.rect", json!({"x": 100, "y": 100, "width": 40, "height": 20})).unwrap();
+    let provider = Arc::new(FakeProvider::default());
+    s.set_ai_provider(Some(provider.clone()));
+    let r = s.execute(CMD, json!({})).unwrap();
+    let sent = provider.state.lock().unwrap().request.as_ref().unwrap().window;
+    assert_eq!(sent, Rect::new(68, 68, 172, 152), "40 x 20 box plus 32 px on every side");
+    assert_eq!(r["window"], json!([68, 68, 104, 84]), "{r}");
+    // A box near the corner is clamped to the canvas, and a long box pads by a quarter of its length.
+    s.execute("select.rect", json!({"x": 0, "y": 280, "width": 320, "height": 20})).unwrap();
+    s.execute(CMD, json!({})).unwrap();
+    let sent = provider.state.lock().unwrap().request.as_ref().unwrap().window;
+    assert_eq!(sent, Rect::new(0, 200, 400, 300), "320 px long: 80 px of padding, clamped");
+}
+
+/// BF-02 P2: a window over the provider's `max_pixels` is refused with a sentence before any pixel
+/// is read or sent, and the document is unchanged.
+#[test]
+fn a_window_over_the_provider_limit_is_refused_before_anything_is_sent() {
+    let mut s = blob_session(8);
+    let layers = s.active().unwrap().doc.layer_count();
+    // The window here is the whole 64 x 48 canvas (3072 px).
+    let provider = Arc::new(FakeProvider { max_pixels: Some(Ok(Some(3_000))), ..Default::default() });
+    s.set_ai_provider(Some(provider.clone()));
+    let e = s.execute(CMD, json!({})).unwrap_err();
+    assert_eq!(e.to_string(), "The area to fill is 3072 pixels, over the 3000 pixels Craft AI Manager accepts; select a smaller area.");
+    let st = provider.state.lock().unwrap();
+    assert_eq!(st.limit_asks, 1, "the limit was asked for");
+    assert!(st.request.is_none(), "nothing was submitted");
+    drop(st);
+    assert_eq!(s.active().unwrap().doc.layer_count(), layers);
+    // At or under the limit it runs.
+    let mut s = blob_session(8);
+    use_provider(&mut s, FakeProvider { max_pixels: Some(Ok(Some(3_072))), ..Default::default() });
+    assert!(s.execute(CMD, json!({})).is_ok());
+}
+
+/// BF-02 P4: a provider that cannot even say its limit (Craft AI Manager not running) fails the
+/// job with the manager's sentence before the window is read or anything is submitted.
+#[test]
+fn a_provider_that_is_not_running_fails_before_the_window_is_read() {
+    let mut s = blob_session(8);
+    let provider = Arc::new(FakeProvider { max_pixels: Some(Err(AiError::NoProvider)), ..Default::default() });
+    s.set_ai_provider(Some(provider.clone()));
+    assert_eq!(s.execute(CMD, json!({})).unwrap_err().to_string(), "Craft AI Manager isn't running");
+    assert!(provider.state.lock().unwrap().request.is_none(), "nothing was encoded or submitted");
+}
+
+/// BF-02 follow-up: a manager that cannot answer the limit question is not a reason to refuse the
+/// fill. Only "isn't running" and a refused token stop early; anything else falls back to the
+/// default limit and the fill goes ahead.
+#[test]
+fn a_failed_limit_check_falls_back_to_the_default_limit() {
+    for error in [
+        AiError::Other("Craft AI Manager did not answer in time.".into()),
+        AiError::Other("Craft AI Manager answered with something that is not its task list.".into()),
+        AiError::Other("PhotoCraft lost the connection to Craft AI Manager.".into()),
+    ] {
+        let mut s = blob_session(8);
+        let provider = Arc::new(FakeProvider { max_pixels: Some(Err(error.clone())), ..Default::default() });
+        s.set_ai_provider(Some(provider.clone()));
+        assert!(s.execute(CMD, json!({})).is_ok(), "{error}: the fill should still run");
+        let st = provider.state.lock().unwrap();
+        assert_eq!(st.limit_asks, 1, "the limit was asked for once");
+        assert!(st.request.is_some(), "{error}: the window was still sent");
+    }
+}
+
+/// BF-02 follow-up: a refused token is not a blip. It stops the fill before the window is read,
+/// with the sentence that tells the user to restart Craft AI Manager.
+#[test]
+fn a_refused_token_fails_before_the_window_is_read() {
+    let mut s = blob_session(8);
+    let provider = Arc::new(FakeProvider { max_pixels: Some(Err(AiError::TokenMismatch)), ..Default::default() });
+    s.set_ai_provider(Some(provider.clone()));
+    assert_eq!(s.execute(CMD, json!({})).unwrap_err().to_string(), "Craft AI Manager refused the request (token mismatch); restart Craft AI Manager.");
+    assert!(provider.state.lock().unwrap().request.is_none(), "nothing was encoded or submitted");
+}
+
+/// BF-02 P6: amendment 4's note for 32-bit documents (values are clamped to 0–1 for the model).
+#[test]
+fn a_32_bit_document_s_result_says_its_values_were_clamped() {
+    for depth in [8, 16, 32] {
+        let mut s = blob_session(depth);
+        use_provider(&mut s, FakeProvider::default());
+        let r = s.execute(CMD, json!({})).unwrap();
+        if depth == 32 {
+            assert_eq!(r["note"], "32-bit values were clamped to 0–1 for the AI model.", "{r}");
+        } else {
+            assert!(r.get("note").is_none(), "{depth}-bit has nothing to note: {r}");
+        }
+    }
+}
+
+/// BF-02 P7: `sampleAllLayers` must be a boolean; anything else is a bad-params error naming it.
+#[test]
+fn a_non_boolean_sample_all_layers_is_a_bad_params_error() {
+    for value in [json!("yes"), json!(1), json!([true]), json!({})] {
+        let mut s = blob_session(8);
+        use_provider(&mut s, FakeProvider::default());
+        let e = s.execute(CMD, json!({"sampleAllLayers": value})).unwrap_err();
+        assert!(matches!(&e, EngineError::BadParams { msg, .. } if msg.contains("`sampleAllLayers`")), "{value}: {e:?}");
+    }
+    for value in [json!(true), json!(false), json!(null)] {
+        let mut s = blob_session(8);
+        use_provider(&mut s, FakeProvider::default());
+        assert!(s.execute(CMD, json!({"sampleAllLayers": value})).is_ok(), "{value}");
+    }
 }

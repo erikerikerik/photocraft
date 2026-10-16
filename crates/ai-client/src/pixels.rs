@@ -6,7 +6,7 @@ use std::io::Cursor;
 
 use photocraft_color::{ColorMode, PixelFormat, SampleType};
 use photocraft_engine::ai::AiError;
-use png::{BitDepth, ColorType, Decoder, Encoder, Limits};
+use png::{BitDepth, ColorType, Compression, Decoder, Encoder, Limits};
 
 /// Amendment 11: PNG bodies at most 1 GiB (and no larger than the request's pixel count).
 pub const MAX_PNG_BYTES: usize = 1024 * 1024 * 1024;
@@ -146,11 +146,17 @@ pub fn encode_mask(coverage: &[f32], width: u32, height: u32) -> Result<Vec<u8>,
     encode_png(&raw, width, height, ColorType::Grayscale, 8)
 }
 
+/// Loopback is fast, so the PNG favours encode speed over size (`Compression::Fast`: the fdeflate
+/// encoder and a cheap filter) - a 36 MP 16-bit window would take many seconds at the default.
+pub const PNG_COMPRESSION: Compression = Compression::Fast;
+
 fn encode_png(raw: &[u8], width: u32, height: u32, color: ColorType, depth: u8) -> Result<Vec<u8>, AiError> {
-    let mut out = Vec::new();
+    // Room for the usual size up front, so the buffer does not reallocate (and copy) as it grows.
+    let mut out = Vec::with_capacity(raw.len() / 2 + 1024);
     let mut encoder = Encoder::new(&mut out, width, height);
     encoder.set_color(color);
     encoder.set_depth(bit_depth_of(depth));
+    encoder.set_compression(PNG_COMPRESSION);
     let mut writer = encoder.write_header().map_err(encode_failed)?;
     writer.write_image_data(raw).map_err(encode_failed)?;
     writer.finish().map_err(encode_failed)?;

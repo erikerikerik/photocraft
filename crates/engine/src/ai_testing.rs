@@ -1,6 +1,8 @@
 //! The shared AI test provider: it fills the request with a solid colour and can be told to
-//! fail, stall, return bad data or be cancelled. `ai::tests` and the commands that call a
-//! provider (Generative Fill) both use it.
+//! fail, stall, return bad data or be cancelled. Like Craft AI Manager (SPEC amendment 16) it
+//! returns the fill at full strength wherever coverage > 0 (alpha made opaque too) and the input
+//! bit for bit elsewhere; blending by coverage is PhotoCraft's job, done once when the layer is
+//! composited. `ai::tests` and the commands that call a provider (Generative Fill) both use it.
 
 use std::sync::{Mutex, PoisonError};
 
@@ -12,6 +14,12 @@ pub(crate) struct FakeState {
     pub(crate) request: Option<AiRequest>,
     pub(crate) polls: usize,
     pub(crate) cancelled: bool,
+    /// How many times `cancel` was called.
+    pub(crate) cancels: usize,
+    /// `observe`'s progress fraction at the start of every poll.
+    pub(crate) seen: Vec<f32>,
+    /// How many times `max_pixels` was asked.
+    pub(crate) limit_asks: usize,
 }
 
 #[derive(Default)]
@@ -29,6 +37,14 @@ pub(crate) struct FakeProvider {
     pub(crate) call_error: Option<&'static str>,
     /// Put a NaN sample in the result: provider pixels are outside our input, so callers check.
     pub(crate) bad_pixel: bool,
+    /// The first this many polls fail with a call error (a transient blip).
+    pub(crate) poll_errors: usize,
+    /// Progress to report on poll 1, 2, …, instead of polls / `polls`.
+    pub(crate) progress: Vec<f32>,
+    /// Record this job's progress fraction at every poll into `FakeState::seen`.
+    pub(crate) observe: Option<JobCtx>,
+    /// What `max_pixels` answers: `Ok(None)` (not advertised) unless set.
+    pub(crate) max_pixels: Option<Result<Option<u64>, AiError>>,
 }
 
 impl AiProvider for FakeProvider {
@@ -41,19 +57,23 @@ impl AiProvider for FakeProvider {
         }
         req.validate()?;
         let mut s = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        *s = FakeState { request: Some(req.clone()), ..Default::default() };
+        let limit_asks = s.limit_asks;
+        *s = FakeState { request: Some(req.clone()), limit_asks, ..Default::default() };
         Ok(AiJobId::new("fake-job"))
     }
     fn poll(&self, id: &AiJobId) -> Result<AiJobState, AiError> {
         assert_eq!(id.as_str(), "fake-job");
         let mut s = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         s.polls += 1;
+        if let Some(ctx) = &self.observe {
+            s.seen.push(ctx.fraction());
+        }
         if let Some((n, ctx)) = &self.cancel_at
             && s.polls == *n
         {
             ctx.cancel();
         }
-        if self.call_error == Some("poll") {
+        if self.call_error == Some("poll") || s.polls <= self.poll_errors {
             return Err(AiError::Other("The provider call failed".into()));
         }
         if let Some(message) = &self.fail {
@@ -65,7 +85,7 @@ impl AiProvider for FakeProvider {
         if !self.never_finish && s.polls > self.polls {
             return Ok(AiJobState::Done);
         }
-        let progress = s.polls as f32 / self.polls.max(1) as f32;
+        let progress = self.progress.get(s.polls - 1).copied().unwrap_or(s.polls as f32 / self.polls.max(1) as f32);
         if s.polls == 1 {
             Ok(AiJobState::Queued { progress, message: "Queued".into() })
         } else {
@@ -80,10 +100,18 @@ impl AiProvider for FakeProvider {
         let s = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         let req = s.request.as_ref().ok_or_else(|| AiError::Other("No job was submitted".into()))?;
         let mut pixels = req.pixels.clone();
-        // Solid 0.75 in every colour channel; preserve alpha and blend soft coverage.
+        // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
+        // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
+        // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
         for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
-            for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
-                *sample += (0.75 - *sample) * coverage;
+            if *coverage > 0.0 {
+                for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
+                    *sample = 0.75;
+                }
+                // The sample after the colour channels, when the format has one.
+                if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
+                    *alpha = 1.0;
+                }
             }
         }
         if self.bad_pixel
@@ -106,8 +134,16 @@ impl AiProvider for FakeProvider {
     }
     fn cancel(&self, id: &AiJobId) -> Result<(), AiError> {
         assert_eq!(id.as_str(), "fake-job");
-        self.state.lock().unwrap_or_else(PoisonError::into_inner).cancelled = true;
+        let mut s = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        s.cancelled = true;
+        s.cancels += 1;
+        drop(s);
         if self.cancel_fails { Err(AiError::Other("Cancellation could not reach the provider".into())) } else { Ok(()) }
+    }
+    fn max_pixels(&self, task: AiTask) -> Result<Option<u64>, AiError> {
+        assert_eq!(task, AiTask::FillMaskedArea);
+        self.state.lock().unwrap_or_else(PoisonError::into_inner).limit_asks += 1;
+        self.max_pixels.clone().unwrap_or(Ok(None))
     }
 }
 

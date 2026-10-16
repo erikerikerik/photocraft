@@ -2,6 +2,46 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-15: Codex (GPT-6) - PR #15 review note: the NaN/Inf check moved into `ai::wait_for`
+
+The finite-pixel scan sat in `generative_cmds::run` after `run_to_completion` had already returned `Ok`, so a result
+with a NaN or inf failed the command but left the job on the manager. `ai::wait_for` now rejects non-finite result
+pixels beside its window/format/size check, so `run_to_completion` sends the DELETE for it like it does for any other
+bad result, and `generative_cmds::run` no longer scans the result. The sentence is now "The AI result contains invalid
+pixel values" (the "; the document is unchanged" half was engine-level; the test still asserts the document is
+unchanged). `generative_cmds::tests::a_bad_provider_result_is_an_error_and_the_document_is_unchanged` keeps a handle
+on the fake and asserts exactly one cancellation for all four bad-result cases, and `bad_pixel` joined
+`ai::tests::ai_every_error_after_submit_cancels_the_job_on_the_provider`.
+Gates: engine lib 1658/0/13, ai-client 39/0/0, clippy `-D warnings` on both crates, fmt.
+
+## 2026-10-15: Codex (GPT-6) - BF-02 review follow-ups, and why X2 failed on Windows
+
+Five reviewer points on `ai/bf-02-photocraft`, each with a test (receipt: `agents/receipts/BF-02.md`, Follow-up
+section): a failed `/v1/tasks` no longer blocks a fill (only "isn't running" and a refused token do - the 401 now
+arrives as a new `AiError::TokenMismatch`); `FakeProvider` makes a covered pixel opaque (amendment 16); megapixel
+limits print as "1.5 megapixels"; `http::write_request` takes the `BufWriter` apart with `into_parts()` so nothing is
+written twice before the early reply is read; and a new client test composites a full-strength `result.png` by
+coverage through `photocraft_compose::render`.
+
+**Windows finding, worth remembering:** a socket from `accept()` inherits the listener's non-blocking mode on Windows,
+so the fake manager's reads failed with `WouldBlock`, it closed with about 5 MB of the body unread, and the RST deleted
+the early 401 the client had not read yet. `serve_one` now puts the socket back to blocking first (CAIM's
+`handle_connection` does the same) and its early path drains the announced body, like BF-01's `close_after_reply`.
+Half-closing before draining is fine on Windows; closing with the body unread is not, on any platform.
+
+Gates green here: ai-client 39/0/0 over ten runs (no flakes), engine lib 1658/0/13 plus 54 integration binaries,
+cli 34/0/0, `panic_hunt -- --ignored`, app build, layers, clippy `-D warnings`, fmt.
+
+**Next:** PR #15 is open (https://github.com/erikerikerik/photocraft/pull/15, base `main`, mergeable, not merged): it needs an
+independent review and green CI on ubuntu and windows before merge. **CI cannot run yet:** GitHub has paused
+workflows on the photocraft fork ("not currently being run on this fork due to the scale of GitHub Actions
+usage"); the repo created no run after 2026-10-14 20:41Z, not even for PR #14's merge into `main`. A maintainer
+must re-enable workflows on the fork's Actions tab. The BF-02 row in `agents/TASKS.md` stays `review`
+until then. `gh` 2.102.0 is now on CraftML at `E:\CraftML\tools\ghx\bin` (the winget MSI is blocked by
+org policy, so it is the release zip) and signed in through the device flow, which unblocks CN-00 half: agents can
+open PRs; a scoped fine-grained token is still Erik’s call.
+
+
 ## 2026-10-14 (end of day): Claude
 
 **Done today:** SY-01 (upstream 0.9.0), PC-04, MG-00, MG-01, MG-02, MG-04 (+MG-05), all reviewed and merged. Craft AI Manager runs real LaMa on the CPU; PhotoCraft's CLI gets a "Generative Fill" layer from it (1.6 s per fill after the first). CI green on both repos.
