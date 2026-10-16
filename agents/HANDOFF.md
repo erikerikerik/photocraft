@@ -2,6 +2,14 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (midday): Codex-Strata (autopilot) - PC-07 review round 4: the runner has a test of its own
+
+- Same branch and PR #17; the new commit follows `0e85097c`, review that commit only. Fourth push, past SPEC 17's two rounds, at Erik's request.
+- New `agents/tools/test-run-guards.ps1` (140 lines): it builds a throwaway `<Work>` tree under `%TEMP%` - two fake craft-ai-manager checkouts (one under `<Work>`, one under `<Work>\wt`, where task worktrees live) and one fake photocraft, each with a `.git` marker and one guard line that writes the folder it actually ran in - then checks four cases: the single-repository override guards the worktree and not the checkout under `-Work`; the same `-RepoPath` with the default `-Repo both` keeps photocraft; a `-RepoPath` with no `.git` fails the run and names the repo; an unnamed `-RepoPath` asks for `-Repo`. Eleven checks, nothing written into either repo, `-Runner <ps1>` points it at another copy of the runner.
+- It bites, which is the point: `fdb6cab0` fails 1 of 11 (the round-2 P2), `1a235229` fails 2 of 11 (the round-3 bare-string `$repos` bug, which let a missing `-RepoPath` exit 0 and guard the wrong checkout), and `0e85097c` passes 11 of 11.
+- `agents/guards.txt` gained `PC-07 | photocraft | powershell -NoProfile -ExecutionPolicy Bypass -File agents/tools/test-run-guards.ps1`, so checkout selection is guarded from here on. Through the real runner: `-Repo photocraft -RepoPath E:\CraftML\work\wt\pc-07 -Only PC-07` gave 1 of 1 in 1.4 s, `E:\CraftML\work\logs\guards-20261016-1014.txt`.
+- **PhotoCraft CI is red on `main`, not on us, and PR #17 cannot go green until Erik decides:** `tests::an_early_401_during_a_large_upload_is_reported_as_the_token_message` (`crates/ai-client/src/tests.rs:655`, `assertion left == right failed`) fails on main run 38861354829 and on this PR's head run 38867502819, where the same binary passed earlier in the same job - a flake, not a regression. Two of main's last four completed runs are red the same way.
+- Receipt: `agents/receipts/PC-07.md`, round-4 section. The `gh` token note there is updated: the printed token was revoked and the new one has `workflow` scope, which is what lets MG-07 push `.github/workflows/ci.yml`.
 ## 2026-10-16 (early, later): Codex-Strata (autopilot) - PC-07 review round 3, found by using the tool
 
 - Same branch and PR #17; the new commit on `ai/pc-07-guards` follows `1a235229`. Review that commit only.
