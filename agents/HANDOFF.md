@@ -6,6 +6,7 @@ Update this at the end of every session: newest entry on top, keep it short.
 
 - Autopilot queue for tonight: PC-07, MG-07 (CAIM CI licence check + MSRV), MG-08 (Ctrl+C shutdown), MG-09 (models remove / disk use), then SY-02 (upstream sync). Prompts in `agents/prompts/`. Erik allowed permissive libraries and an overnight sync (SPEC 17 note).
 - PC-06 stays waiting on Erik's hands-on check; autopilot does not touch it.
+- **Running the guards (PC-07, Codex-Strata).** `agents/tools/run-guards.ps1` runs every line of `agents/guards.txt`: `-Repo photocraft|craft-ai-manager` (default both), `-Work E:\CraftML\work`, `-Only <ID>` for one line (`-Only BASE-1` is the first `BASE` line of a repo's file). Each line runs from that repo's root with `CARGO_TARGET_DIR=target/agent-guards`; the script prints ID, command, PASS/FAIL and seconds, exits 1 if any line failed, and saves the table to `E:\CraftML\work\logs\guards-<yyyyMMdd-HHmm>.txt`. Receipt: `agents/receipts/PC-07.md`.
 
 ## 2026-10-15 (end of day): Claude
 
