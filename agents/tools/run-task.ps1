@@ -52,7 +52,9 @@ if (-not (Test-Path $prompt)) {
 
 # Network on inside the sandbox (crates.io, model and runtime downloads, git push). Without this,
 # Codex's sandbox can block the network, as it did on MG-04's first run.
-$sandbox = @('--sandbox', 'workspace-write', '-c', 'sandbox_workspace_write.network_access=true')
+# Never stop to ask for approval, but stay inside the sandbox: Codex can write only in the work
+# folder (plus the network), not anywhere else on the PC. Safer than full access, no prompts.
+$sandbox = @('--sandbox', 'workspace-write', '--ask-for-approval', 'never', '-c', 'sandbox_workspace_write.network_access=true')
 
 # No double quotes inside: Windows PowerShell 5.1 mangles them when passing arguments to programs.
 $ask = "Read $prompt and carry out the task below the --- line exactly."
