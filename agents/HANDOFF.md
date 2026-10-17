@@ -2,6 +2,16 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (late): Codex-Strata (autopilot) - RS-01 merged (PR #20); PC-08 parked behind SY-02
+
+- **Review round 1 on the RS-01 docs PR #21: one P2, and it was right.** Setting RS-01 to `done` would have satisfied MG-10's dependency even though MG-10 still waits on Erik's two decisions, so autopilot could have started it and written an unsigned override or the wrong checkpoint. Fix: a new **D12** decision row (`todo`) holding those two decisions, and MG-10's dependency column is now `RS-01, AM-18, D12`.
+
+- **Review round 2 on #21: two P2s, both right.** (1) MG-10 still needed a hard block, so the MG-10 row now opens "Blocked while D12 is `todo`" and the D12 row opens "Blocks MG-10". (2) PC-08 must not start before SY-02 merges - `agents/prompts/local-autopilot.md` says so and both tasks touch the engine AI files - so the worktree is parked and PC-08 now depends on `AM-18, SY-02`.
+- **RS-01 is done.** PR #20 merged Oct 16 as merge commit `ca8a5d31` after two review rounds: round 1 = 1 P1 + 4 P2s, round 2 = 1 new P2 (PPM-100 is `ZHKKKe/PPM`, **CC BY-NC-SA 4.0**, not MIT - I had conflated it with `JizhiziLi/P3M`), all six fixed, approved clean on `e5f8b37a`. Docs only, so it merged on approval alone. The facts MG-10 builds on are in `agents/models/birefnet.md` and `agents/models/sam2.md`.
+- **MG-10 is unblocked by RS-01 but still waits on Erik's two decisions:** sign the D11 override wording for BiRefNet, and choose general (972 MB, better masks) or tiny/lite (224 MB, ~1.8x faster) as the CPU default.
+- **SY-02 (PR #19) still needs Erik's call.** Conflicts are resolved as proposed and every check is green except `freebsd / FreeBSD 15 (build + test)`, which sits queued forever: the sync brings upstream's `.github/workflows/freebsd.yml`, a reusable workflow that needs a self-hosted runner with a FreeBSD VM the fork does not have (that job has exactly one run in its history - this PR). Codex-cloud's 3 unresolved P2s are all in upstream files (`apps/photocraft/src/portal_save.rs`, `crates/ui-egui/src/export_dialog.rs`, `apps/photocraft/src/main.rs`), so per amendment 17 they are reported, not fixed. Erik picks one: merge anyway (the check is not required), disable or pin the FreeBSD workflow in the fork, or add a runner.
+- **PC-08 is parked, not pushed.** It had started on `ai/pc-08-mask-results` (worktree `wt/pc-08`, base `c6356cdb`): mask results in `ai.rs`, the amendment 18 downscale-before-send and bilinear upscale, the new `method: ai` option on `select.subject` and `layer.removeBackground` (default stays `classical`), provenance in both results, `FakeProvider` mask mode. Nothing was pushed and no PR was opened; the work sits in local commit `50da170f` and will be re-based onto `main` once SY-02 lands, then restarted from a clean tree.
+
 ## 2026-10-16 (evening): Codex-Strata (autopilot) - RS-01 BiRefNet facts and SAM 2.1 licences up as PR #20
 
 - **RS-01 is `review`** in draft PR #20 (`ai/rs-01-birefnet`, base `572292ae`). Docs only: `agents/models/birefnet.md`, `agents/models/sam2.md`, `agents/receipts/RS-01.md`. No app code, no catalog change, no new dependency, no guard line (nothing to guard; mdBook builds `book/`, not `agents/`).
