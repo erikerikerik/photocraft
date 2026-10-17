@@ -321,3 +321,14 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
     - **Who:** someone other than the authors. Claude plans and leads it; Codex-cloud reviews independently, and Codex-Strata fixes. Findings go in `agents/reviews/<date>-<milestone>-bug-hunt.md`, each with a severity, a file and line, and a repro.
     - **Scope:** both repos, everything the milestone touched. Protocol edge cases (both sides of the wire, old and new peers), cancel and error paths, resource limits, licence-gate and security rules (loopback only, token, no secrets, no pickle), and the guards themselves (does each guard still test what it claims?).
     - **Rule:** every P0 and P1 finding is fixed, each with a test that would have caught it, before sign-off. P2s are fixed too unless Erik defers one in writing. Bugs found in upstream code go the UP-xx route (D13).
+21. **FreeBSD policy (Erik, Oct 17, after Claude's and ChatGPT's review).** FreeBSD stays meaningful without making every PR wait about 1.5 h for a FreeBSD VM.
+    - **What exists:** upstream's `.github/workflows/freebsd.yml` already runs **nightly at 02:17 UTC on `main`**, on PRs that touch FreeBSD packaging, and on demand (`workflow_dispatch`). We never edit that file (syncs stay clean).
+    - **Required before merge:**
+      - upstream syncs (SY-xx, `sync/*`);
+      - upstream-bound fixes (UP-xx, `upfix/*`), before the upstream PR opens;
+      - any PR that `agents/tools/needs_freebsd.py` marks NEEDED: dependencies, `Cargo.toml` / `Cargo.lock`, CI, build scripts, packaging, toolchain, the AI client, or changed lines with platform `cfg`, `std::os`, sockets, processes, file permissions, environment variables or OS folders. Exit 2 (could not decide) counts as NEEDED.
+      - **How:** add the `needs-freebsd` label, then `gh workflow run freebsd.yml --repo erikerikerik/photocraft --ref <branch>`, and merge only after that run is green on the PR's head commit. A new push needs a new run.
+    - **Not required:** changes the script marks "not needed" merge once the other checks are green.
+    - **Nightly red:** a failed nightly run on `main` is a P1. Autopilot's first step checks the latest nightly run. When it is red, the next task is a focused fix (FB-xx). Until it is green again, nothing marked NEEDED merges, while platform-independent work continues.
+    - **Enforcement, stated honestly:** `main` has no branch protection or rulesets (checked Oct 17), so GitHub enforces nothing; these rules are kept by autopilot and Claude. FreeBSD is deliberately not a GitHub *required* check: a required check on a workflow that only runs for some PRs leaves every other PR pending forever. When branch protection arrives (S4), it requires the always-running CI checks, and this rule keeps covering FreeBSD.
+    - CAIM has no FreeBSD build (ONNX Runtime has none); this policy is about PhotoCraft still building and passing its tests there.
