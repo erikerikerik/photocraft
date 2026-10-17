@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-17 (afternoon): Claude - Erik: MG-12 final round, PC-08 under Claude's review
+
+- **MG-12 (CAIM PR #7): one final fix round, authorised by Erik (Oct 17).** Fix the fifth P2 by **owner liveness, not a timer**: the launch lock records the holder's PID (and process start time where the OS gives it); `caim open` takes the lock over only if that process is gone, never because 30 s passed. Same round: the bounded retry in `crates/caim/tests/open_command.rs:67`'s busy test. Then merge on approval and green CI; any further finding in this area goes to BH-02, not another round.
+- **PC-08 (fork PR #24):** Claude is doing the independent review; autopilot leaves #24 alone until Claude's verdict is posted on the PR.
+- Order: MG-12 final round, MG-10, UP-02 (autopilot prompt, "Order (Oct 17)").
+
 ## 2026-10-17: Codex-Strata (autopilot) - SY-02: the one red CI job was our own flaky test harness
 
 - **SY-02 (PR #19)** had one real failure on `fb0e4cf3`: `test (ubuntu-latest)`, in `an_early_401_during_a_large_upload_is_reported_as_the_token_message` (`crates/ai-client/src/tests.rs:655`), `captured.len()` 0 where 1 is asserted. The 2 s `test (windows-latest)` failure is the aggregate gate mirroring it (`TEST: failure`), not a second failure; corpus, wasm, web, eval, mdBook, lint, both windows test jobs and the AppImage check were green and FreeBSD was still finishing.
