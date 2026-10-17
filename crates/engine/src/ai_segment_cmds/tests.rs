@@ -401,23 +401,88 @@ fn sent_size_keeps_the_ratio_under_the_limit() {
 #[test]
 fn the_downscale_never_keeps_the_whole_canvas_in_memory() {
     // The 6000x4000 document sent at 1254x836: a strip is 64 output rows, so at most 5 source rows
-    // per output row plus the seam, and four bytes per source pixel of the 6000-pixel row.
-    let strip_bytes = (5 * 64 + 1) * 6000 * 4;
+    // per output row plus the seam, and the sampler answers `[f32; 4]` - sixteen bytes for every
+    // source pixel of the 6000-pixel row, which is about 30 MB of source pixels per strip.
+    let strip_bytes = (5 * 64 + 1) * 6000 * 16;
     let batch = strips_in_flight(strip_bytes, 14);
-    assert!((1..14).contains(&batch), "sixteen strips of 7.7 MB cannot all be in flight, got {batch}");
+    assert!((1..14).contains(&batch), "fourteen strips of 30 MB cannot all be in flight, got {batch}");
     assert!(batch * strip_bytes <= MAX_RESIDENT_BYTES, "{batch} strips of {strip_bytes} bytes stay inside the budget");
-    assert_eq!(strips_in_flight(64 * 8 * 4, 3), 3, "small strips are not throttled");
+    assert_eq!(strips_in_flight(64 * 8 * 16, 3), 3, "small strips are not throttled");
     assert_eq!(strips_in_flight(MAX_RESIDENT_BYTES * 4, 9), 1, "an oversized strip is read on its own");
     assert_eq!(strips_in_flight(0, 5), 5, "an empty strip is not a division by zero");
     assert_eq!(strips_in_flight(strip_bytes, 0), 1, "no strips still asks for at least one");
 }
 
 #[test]
+fn a_huge_document_only_builds_the_mask_it_can_touch() {
+    // The largest document `file.new` allows, with a provider mask that selects one corner. The
+    // upscale has to build the corner, not a float for every one of ninety billion pixels.
+    let (doc, from) = (Size::new(300_000, 300_000), Size::new(100, 100));
+    let mut corner = vec![0.0; 100 * 100];
+    corner[50 * 100 + 50] = 1.0;
+    let bbox = coverage_bbox(&corner, from).unwrap();
+    assert_eq!(bbox, Rect::new(50, 50, 51, 51), "the box of the mask the provider answered with");
+    let touched = touched_rect(bbox, from, doc);
+    let pixels = u64::from(touched.width()) * u64::from(touched.height());
+    assert!(pixels > 0, "a mask that selects something has to build something");
+    assert!(pixels < 50_000_000, "one mask pixel reaches {pixels} document pixels, not the canvas");
+    assert!(pixels <= MAX_MASK_PIXELS, "so the upscale allocates {pixels} floats, not ninety billion");
+    // A mask that fills the provider frame on that document really is too big to build: the command
+    // says so instead of letting the allocation abort the process.
+    let full = vec![1.0; 100 * 100];
+    let full_box = touched_rect(coverage_bbox(&full, from).unwrap(), from, doc);
+    assert_eq!(full_box, Rect::new(0, 0, 300_000, 300_000), "a full mask touches every document pixel");
+    assert!(u64::from(full_box.width()) * u64::from(full_box.height()) > MAX_MASK_PIXELS, "and that is over the cap, so it is refused");
+    assert!(coverage_bbox(&vec![0.0; 100], from).is_none(), "a mask that selects nothing has no box");
+    assert!(coverage_bbox(&[0.0; 4], Size::new(0, 0)).is_none(), "an empty answer has no box either");
+}
+
+#[test]
+fn cropping_the_upscale_does_not_change_the_region() {
+    // The crop is a saving, never a change: outside the box the mask can reach, the full upscale is
+    // zero, so the Region the commands apply is the same either way.
+    let (from, doc) = (Size::new(6, 4), Size::new(23, 17));
+    let mut mask = vec![0.0; 24];
+    for (i, v) in mask.iter_mut().enumerate() {
+        *v = if i % 7 == 3 {
+            0.75
+        } else if i % 5 == 2 {
+            0.25
+        } else {
+            0.0
+        };
+    }
+    let touched = touched_rect(coverage_bbox(&mask, from).unwrap(), from, doc);
+    let whole = upscale_bilinear(&mask, from, doc, Rect::new(0, 0, 23, 17));
+    let part = upscale_bilinear(&mask, from, doc, touched);
+    for y in 0..17usize {
+        for x in 0..23usize {
+            let inside = x >= touched.x0 as usize && x < touched.x1 as usize && y >= touched.y0 as usize && y < touched.y1 as usize;
+            if !inside {
+                assert_eq!(whole[y * 23 + x], 0.0, "({x},{y}) is outside the touched box, so the full upscale has to be zero");
+            }
+        }
+    }
+    let full = mask_region(&whole, Rect::new(0, 0, 23, 17)).unwrap();
+    let cropped = mask_region(&part, touched).unwrap();
+    assert_eq!(full.bbox, cropped.bbox, "the same box");
+    assert_eq!(full.mask, cropped.mask, "and the same 8-bit coverage in it");
+}
+
+#[test]
 fn the_upscaled_mask_blends_with_the_edge_not_with_zero() {
-    let out = upscale_bilinear(&[1.0; 4], Size::new(2, 2), Size::new(5, 5));
+    let out = upscale_bilinear(&[1.0; 4], Size::new(2, 2), Size::new(5, 5), Rect::new(0, 0, 5, 5));
     assert!(out.iter().all(|v| (v - 1.0).abs() < 1e-6), "a full mask stays full to the border: {out:?}");
-    let flat = upscale_bilinear(&[0.0; 9], Size::new(3, 3), Size::new(3, 3));
+    let flat = upscale_bilinear(&[0.0; 9], Size::new(3, 3), Size::new(3, 3), Rect::new(0, 0, 3, 3));
     assert_eq!(flat, vec![0.0; 9], "the same size is the identity");
+    // A sub-rect is the same pixels, only cheaper: the crop the command makes changes nothing.
+    let soft = [0.0, 0.4, 1.0, 0.2];
+    let whole = upscale_bilinear(&soft, Size::new(2, 2), Size::new(7, 5), Rect::new(0, 0, 7, 5));
+    let part = upscale_bilinear(&soft, Size::new(2, 2), Size::new(7, 5), Rect::new(2, 1, 6, 4));
+    for (row, slice) in part.chunks(4).enumerate() {
+        let y = 1 + row;
+        assert_eq!(slice, &whole[y * 7 + 2..y * 7 + 6], "the sub-rect is the slice of the whole");
+    }
 }
 
 #[test]

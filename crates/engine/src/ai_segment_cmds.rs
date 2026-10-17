@@ -36,8 +36,16 @@ const STRIP_ROWS: usize = 256;
 
 /// The most source pixel data a downscale keeps in flight at once. The strips go to the rayon
 /// workers a batch at a time, so the parallelism cannot materialise the whole canvas - which is
-/// the whole point of reading it in strips.
-const MAX_RESIDENT_BYTES: usize = 32 * 1024 * 1024;
+/// the whole point of reading it in strips. 64 MiB is two strips of a 6000x4000 canvas (about
+/// 30 MB of RGBA f32 each): enough to keep the downscale busy, and nowhere near the 384 MB the
+/// canvas would need in full.
+const MAX_RESIDENT_BYTES: usize = 64 * 1024 * 1024;
+
+/// The largest mask the upscale will build, in document pixels. The coverage in front of the
+/// `Region` costs four bytes a pixel, so past this a document stops being something a machine can
+/// be asked to hold, and the command says so instead of letting the allocation abort the process.
+/// It is the same budget the AI path already works to.
+const MAX_MASK_PIXELS: u64 = ai::DEFAULT_MAX_PIXELS;
 
 /// Which method a command was asked for (amendment 18).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -138,8 +146,9 @@ fn read_scaled(sampler: &dyn Sampler, area: Rect, out: Size, cancelled: &(dyn Fn
     let rows_per = (STRIP_ROWS / (sh / oh).max(1)).max(1);
     let strips: Vec<usize> = (0..oh.div_ceil(rows_per)).collect();
     // A strip spans at most `ceil(source rows / output rows)` source rows per output row, plus one
-    // for the seam, and four bytes per source pixel.
-    let strip_bytes = (sh.div_ceil(oh) * rows_per + 1).saturating_mul(sw).saturating_mul(4);
+    // for the seam, and the sampler answers `[f32; 4]`: sixteen bytes for every source pixel of the
+    // `sw`-wide row.
+    let strip_bytes = (sh.div_ceil(oh) * rows_per + 1).saturating_mul(sw).saturating_mul(16);
     let batch = strips_in_flight(strip_bytes, strips.len());
     let run = |si: &usize| -> Option<Vec<f32>> {
         if cancelled() {
@@ -198,7 +207,8 @@ fn read_scaled(sampler: &dyn Sampler, area: Rect, out: Size, cancelled: &(dyn Fn
         parts
     };
     #[cfg(target_arch = "wasm32")]
-    let parts: Vec<Option<Vec<f32>>> = strips.iter().map(run).collect();
+    // Same batches, one after another: there are no workers here, but the bound is the same one.
+    let parts: Vec<Option<Vec<f32>>> = strips.chunks(batch).flat_map(|chunk| chunk.iter().map(run)).collect();
     let mut scaled = Vec::with_capacity(ow * oh * 4);
     for part in parts {
         scaled.extend(part?);
@@ -206,25 +216,68 @@ fn read_scaled(sampler: &dyn Sampler, area: Rect, out: Size, cancelled: &(dyn Fn
     Some(scaled)
 }
 
-/// Stretch the provider's mask from the size it answered at to the document area, bilinearly
-/// (amendment 18). Sample positions are pixel centres; the edge is clamped, never wrapped.
-fn upscale_bilinear(mask: &[f32], from: Size, to: Size) -> Vec<f32> {
+/// The box of the non-zero mask values, in the size the provider answered at, or `None` when the
+/// mask selects nothing. It scans the answer, never the document: the provider's mask is at most
+/// `max_pixels`, which is the whole reason the downscale exists.
+fn coverage_bbox(coverage: &[f32], size: Size) -> Option<Rect> {
+    let (w, h) = (size.width as usize, size.height as usize);
+    if w == 0 || h == 0 {
+        return None;
+    }
+    let (mut y0, mut y1, mut x0, mut x1) = (usize::MAX, 0usize, usize::MAX, 0usize);
+    for (i, v) in coverage.iter().take(w * h).enumerate() {
+        if *v == 0.0 {
+            continue;
+        }
+        let (y, x) = (i / w, i % w);
+        (y0, y1, x0, x1) = (y0.min(y), y1.max(y + 1), x0.min(x), x1.max(x + 1));
+    }
+    if y0 == usize::MAX {
+        return None;
+    }
+    let edge = |n: usize| i32::try_from(n).unwrap_or(i32::MAX);
+    Some(Rect::new(edge(x0), edge(y0), edge(x1), edge(y1)))
+}
+
+/// The document pixels the upscaled mask can touch, counted from the top-left of the area it
+/// covers. A document column `ox` samples mask columns `floor((ox + 0.5) * sw / ow - 0.5)` and the
+/// one after it, so it can reach `bbox` once that index falls in `bbox.x0 - 1 ..= bbox.x1 - 1`.
+/// Inverting the map and rounding outwards, with a pixel of slack for the f32 arithmetic the
+/// upscale itself does, keeps every reachable pixel in. Everything outside is exactly zero, which
+/// is what stops a huge document from paying a float for every pixel of it.
+fn touched_rect(bbox: Rect, from: Size, doc: Size) -> Rect {
+    let span = |a: i32, b: i32, small: u32, big: u32| -> (i32, i32) {
+        let (s, g) = (f64::from(small), f64::from(big));
+        let lo = (((f64::from(a) - 0.5) * g / s - 0.5).floor() as i64 - 1).clamp(0, i64::from(big));
+        let hi = (((f64::from(b) + 0.5) * g / s - 0.5).ceil() as i64 + 1).clamp(0, i64::from(big));
+        (lo as i32, hi.max(lo) as i32)
+    };
+    let (x0, x1) = span(bbox.x0, bbox.x1, from.width, doc.width);
+    let (y0, y1) = span(bbox.y0, bbox.y1, from.height, doc.height);
+    Rect::new(x0, y0, x1, y1)
+}
+
+/// Stretch the provider's mask from the size it answered at to `rect` of the document, bilinearly
+/// (amendment 18). Sample positions are pixel centres of the document, so a sub-rect costs only its
+/// own pixels; the edge is clamped, never wrapped.
+fn upscale_bilinear(mask: &[f32], from: Size, doc: Size, rect: Rect) -> Vec<f32> {
     let (sw, sh) = (from.width as usize, from.height as usize);
-    let (ow, oh) = (to.width as usize, to.height as usize);
-    if sw == 0 || sh == 0 || ow == 0 || oh == 0 {
+    let (rx0, ry0) = (rect.x0.max(0) as usize, rect.y0.max(0) as usize);
+    let (rx1, ry1) = (rect.x1.max(rect.x0).max(0) as usize, rect.y1.max(rect.y0).max(0) as usize);
+    if sw == 0 || sh == 0 || doc.width == 0 || doc.height == 0 || rx1 <= rx0 || ry1 <= ry0 {
         return Vec::new();
     }
     // Both indices are clamped into the mask, so the last row and column blend with the edge value
     // rather than with zero (which would darken the border of the selection).
     let at = |x: usize, y: usize| mask.get(y.min(sh - 1) * sw + x.min(sw - 1)).copied().unwrap_or(0.0).clamp(0.0, 1.0);
-    let mut out = Vec::with_capacity(ow * oh);
-    for oy in 0..oh {
-        let gy = (oy as f32 + 0.5) * sh as f32 / oh as f32 - 0.5;
+    let mut out = Vec::with_capacity((rx1 - rx0) * (ry1 - ry0));
+    for oy in ry0..ry1 {
+        let gy = (oy as f32 + 0.5) * sh as f32 / doc.height as f32 - 0.5;
         let y0 = gy.max(0.0).floor() as usize;
         let (y0, y1) = (y0.min(sh - 1), y0.min(sh - 1) + 1);
         let fy = (gy - y0 as f32).clamp(0.0, 1.0);
-        for ox in 0..ow {
-            let gx = (ox as f32 + 0.5) * sw as f32 / ow as f32 - 0.5;
+        for ox in rx0..rx1 {
+            let gx = (ox as f32 + 0.5) * sw as f32 / doc.width as f32 - 0.5;
             let x0 = (gx.max(0.0).floor() as usize).min(sw - 1);
             let fx = (gx - x0 as f32).clamp(0.0, 1.0);
             let (top, bottom) = (at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx, at(x0, y1) + (at(x0 + 1, y1) - at(x0, y1)) * fx);
@@ -263,9 +316,12 @@ fn mask_region(coverage: &[f32], area: Rect) -> Option<Region> {
     Some(Region { bbox: Rect::new(bx0, by0, bx0.saturating_add(width as i32), by0.saturating_add((y1 - y0) as i32)), mask })
 }
 
-/// What one `subject_mask` job produced: the coverage over the whole document area, and where it ran.
+/// What one `subject_mask` job produced: the coverage over the document pixels the mask can touch,
+/// in document coordinates, and where it ran. It is a sub-rect rather than the whole document:
+/// outside the mask's own bounds the upscale is exactly zero, and a huge document must not pay
+/// for pixels nothing selects.
 struct Masked {
-    area: Rect,
+    rect: Rect,
     coverage: Vec<f32>,
     ai: Value,
 }
@@ -324,7 +380,34 @@ fn mask_job(provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerI
         return Err(EngineError::Other("The AI provider returned an image to a mask request".to_string()));
     };
     ctx.progress(0.9, "Scaling the mask");
-    Ok(Masked { area, coverage: upscale_bilinear(&coverage, size, area.size()), ai })
+    // Only the document pixels the mask can touch are built. The provider's answer is at most
+    // `max_pixels`, so its own bounds are cheap to find, and everything outside them upscales to
+    // exactly zero - which is what keeps a very large document from allocating a float per pixel.
+    let Some(bbox) = coverage_bbox(&coverage, size) else {
+        // Nothing selected: an empty coverage reads as "no subject found" to both callers, exactly
+        // as a mask that quantises to zero everywhere did.
+        return Ok(Masked { rect: Rect::new(0, 0, 0, 0), coverage: Vec::new(), ai });
+    };
+    let touched = touched_rect(bbox, size, area.size());
+    // Refuse before allocating for it, as Generative Fill and Content-Aware Fill do: a mask over
+    // more than the budget is four bytes a pixel of coverage before the Region even starts.
+    if u64::from(touched.width()) * u64::from(touched.height()) > MAX_MASK_PIXELS {
+        return Err(EngineError::Other(format!(
+            "the AI selection is too large to mask ({}×{} px; max {} megapixels): use the classical method, or work on a smaller area",
+            touched.width(),
+            touched.height(),
+            MAX_MASK_PIXELS / 1_000_000
+        )));
+    }
+    let coverage = upscale_bilinear(&coverage, size, area.size(), touched);
+    // The box travels in document coordinates, which is what `mask_region` offsets the Region by.
+    let rect = Rect::new(
+        area.x0.saturating_add(touched.x0),
+        area.y0.saturating_add(touched.y0),
+        area.x0.saturating_add(touched.x1),
+        area.y0.saturating_add(touched.y1),
+    );
+    Ok(Masked { rect, coverage, ai })
 }
 
 /// `select.subject` with `"method": "ai"`: the mask becomes the selection, combined with the current
@@ -345,7 +428,7 @@ pub(crate) fn select_subject(s: &mut Session, p: &Value) -> Result<Value> {
         true,
         move |ctx| mask_job(&provider, &doc, target, sample_all, ctx),
         move |s, masked| {
-            let region = mask_region(&masked.coverage, masked.area);
+            let region = mask_region(&masked.coverage, masked.rect);
             let mut out = smartselect_cmds::apply(s, "Select Subject", region.as_ref(), m)?;
             if let Some(fields) = out.as_object_mut() {
                 fields.insert("ai".to_string(), masked.ai);
@@ -373,7 +456,7 @@ pub(crate) fn remove_background(s: &mut Session, p: &Value) -> Result<Value> {
         "Remove Background",
         move |doc, _, ctx| {
             let masked = mask_job(&provider, doc, Some(id), sample_all, ctx)?;
-            let mut region = mask_region(&masked.coverage, masked.area).ok_or_else(|| EngineError::Other("no subject found".to_string()))?;
+            let mut region = mask_region(&masked.coverage, masked.rect).ok_or_else(|| EngineError::Other("no subject found".to_string()))?;
             if refine {
                 ctx.progress(0.95, "Refining edge");
                 let refined = with_doc_sampler(doc, Some(id), sample_all, |smp, d| {
