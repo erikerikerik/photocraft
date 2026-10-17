@@ -5,7 +5,12 @@
 - **MG-12 is in review.** CAIM PR #7 (`ai/mg-12-resume-launch`, from CAIM `main` `e8a8cda`) does all four things amendment 18 asks for: restart-safe resume, `app.json`, `caim open`, `activity.jsonl`. Receipt: CAIM `agents/receipts/MG-12.md`. No new dependency, and CAIM's `deny` / `msrv` / ubuntu jobs are green on the PR.
 - **One deviation, written into CAIM's README and receipt:** the half-download pair is `<file>.<tag>.part` and `<file>.<tag>.part.json` rather than the bare `<file>.part` the amendment names. Each install has to keep its own `.part` - MG-02's rule is that an install only ever renames bytes it hashed itself - so one shared name would let two installs of one model put a wrong file under the verified name. `adopt_part` finds an abandoned pair, checks the note (same url, revision, SHA-256, byte count) and renames it under the new tag before continuing it.
 - **This PR is docs only.** MG-12's code lives in craft-ai-manager; the task row lives here, so only `agents/TASKS.md` and this file change.
-- **Queue after MG-12:** PC-08 stays parked behind SY-02 (PR #19 still needs Erik's call on the FreeBSD job and the three upstream P2s), PC-09 waits on PC-08, MG-10 waits on D12, MG-11/PC-11/PC-10/PC-12 need MG-10 or UI-01, MG-13 needs UI-01. Nothing else has a prompt and a free dependency, so autopilot stops once MG-12 is merged.
+- **Queue after MG-12, per the rows above (not a shortcut summary):**
+  - PC-08 stays parked behind SY-02 - PR #19 still needs Erik's call on the FreeBSD job and the three upstream P2s.
+  - PC-09 waits on PC-08. PC-11 waits on PC-08 alone - nothing else.
+  - PC-10 waits on PC-09 and MG-12; MG-12 is the one closing now, so PC-10 is really waiting on PC-09.
+  - MG-10 waits on D12 (Erik signs the D11 override wording and picks the CPU default checkpoint). MG-11 waits on MG-10. MG-13 waits on UI-01. PC-12 is Phase D and waits on everything above plus the latest SY sync.
+  - Nothing else has both a prompt and a met dependency, so autopilot stops once MG-12 is merged.
 Update this at the end of every session: newest entry on top, keep it short.
 
 ## 2026-10-16 (late): Codex-Strata (autopilot) - RS-01 merged (PR #20); PC-08 parked behind SY-02
