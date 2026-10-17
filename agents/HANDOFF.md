@@ -1,5 +1,13 @@
 # HANDOFF
 
+## 2026-10-17 (morning): Claude - Erik's calls: SY-02 merge, MG-12 round 3, UP-02
+
+- **SY-02 (PR #19):** Claude merged `origin/main` into `sync/upstream-2026-10-16` (`4c70253`; only `agents/` files, the HANDOFF conflict keeps both sides). FreeBSD now passes. **Merge when CI is green** (D14); the three upstream P2s are not fixed in the sync, they become UP-02.
+- **MG-12 (CAIM PR #7): third fix round authorised** (D14): a launch lock around `caim open`'s decide-and-start, and a 503 health answer counts as "running". Then merge on approval and green CI.
+- **UP-02 (new, D13):** fix the three upstream bugs, one upstream PR each from `upstream/main`, cherry-picked into the fork. Prompt `agents/prompts/local-up-02.md`; starts after SY-02.
+- **Still Erik's:** D12 (BiRefNet override wording, lite or general as the CPU default), which blocks MG-10.
+- Erik's standing rule: move forward, fix bugs now, don't creep scope, security first.
+
 ## 2026-10-17: Codex-Strata (autopilot) - MG-12 review round 3: two P2s, and the two-round cap is reached
 
 - **CAIM PR #7 has used its two fix rounds, so round 3 is reported, not fixed.** Round 1 (`9cd3309`) fixed four findings. Round 2 (`b63ee97`) fixed one P1 - a takeover renamed the abandoned `.part`, and on Unix that is the same inode, so an owner that was still writing could poison the file we were about to verify; it now copies the bytes it resumes from into its own `.part` - plus two P2s: a note that counts the whole file asked for `Range: bytes=<size>-` and got 416 forever, and one socket read can hand back half a status line, which made `caim open` decide a live manager was dead. All four CAIM checks are green on `b63ee97` (ubuntu 39s, windows 1m32s, deny 22s, msrv 37s); 250 tests pass locally.
