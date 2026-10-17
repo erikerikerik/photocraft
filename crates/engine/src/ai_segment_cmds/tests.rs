@@ -389,6 +389,27 @@ fn sent_size_keeps_the_ratio_under_the_limit() {
     let tall = sent_size(Size::new(4000, 6000), 1_000_000);
     assert!(u64::from(tall.width) * u64::from(tall.height) <= 1_000_000, "{tall:?}");
     assert!((f64::from(tall.width) * 6000.0 - f64::from(tall.height) * 4000.0).abs() <= 6000.0, "{tall:?} keeps the ratio");
+    // A document that can only shrink one way still has to fit: the other side takes the strain.
+    for (area, limit) in [(Size::new(1200, 1), 600), (Size::new(1, 1200), 600), (Size::new(4000, 1), 1_000)] {
+        let got = sent_size(area, limit);
+        assert!(u64::from(got.width) * u64::from(got.height) <= limit, "{area:?} under {limit} sent {got:?}, which is over the limit");
+        assert!(got.width >= 1 && got.height >= 1, "{area:?} under {limit} sent {got:?}, which is empty");
+        assert!(got.width <= area.width && got.height <= area.height, "{area:?} under {limit} sent {got:?}, which grew");
+    }
+}
+
+#[test]
+fn the_downscale_never_keeps_the_whole_canvas_in_memory() {
+    // The 6000x4000 document sent at 1254x836: a strip is 64 output rows, so at most 5 source rows
+    // per output row plus the seam, and four bytes per source pixel of the 6000-pixel row.
+    let strip_bytes = (5 * 64 + 1) * 6000 * 4;
+    let batch = strips_in_flight(strip_bytes, 14);
+    assert!((1..14).contains(&batch), "sixteen strips of 7.7 MB cannot all be in flight, got {batch}");
+    assert!(batch * strip_bytes <= MAX_RESIDENT_BYTES, "{batch} strips of {strip_bytes} bytes stay inside the budget");
+    assert_eq!(strips_in_flight(64 * 8 * 4, 3), 3, "small strips are not throttled");
+    assert_eq!(strips_in_flight(MAX_RESIDENT_BYTES * 4, 9), 1, "an oversized strip is read on its own");
+    assert_eq!(strips_in_flight(0, 5), 5, "an empty strip is not a division by zero");
+    assert_eq!(strips_in_flight(strip_bytes, 0), 1, "no strips still asks for at least one");
 }
 
 #[test]

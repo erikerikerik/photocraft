@@ -34,6 +34,11 @@ const NOT_INSTALLED: &str = "The Select Subject model isn't installed. Open Craf
 /// that a full-resolution canvas is never held in memory at once.
 const STRIP_ROWS: usize = 256;
 
+/// The most source pixel data a downscale keeps in flight at once. The strips go to the rayon
+/// workers a batch at a time, so the parallelism cannot materialise the whole canvas - which is
+/// the whole point of reading it in strips.
+const MAX_RESIDENT_BYTES: usize = 32 * 1024 * 1024;
+
 /// Which method a command was asked for (amendment 18).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Method {
@@ -97,11 +102,23 @@ fn sent_size(area: Size, max_pixels: u64) -> Size {
     let mut sh = ((max_pixels as f64 * h / w).sqrt().floor() as u32).max(1);
     loop {
         let sw = ((w / h * f64::from(sh)).round() as u32).max(1);
-        if u64::from(sw).checked_mul(u64::from(sh)).is_none_or(|n| n <= max_pixels) || sh <= 1 {
+        if u64::from(sw).checked_mul(u64::from(sh)).is_none_or(|n| n <= max_pixels) {
             return Size::new(sw, sh);
+        }
+        if sh <= 1 {
+            // The height cannot shrink any further, so the width has to: a document one pixel tall
+            // still has to fit under the limit rather than quietly break it.
+            let cap = max_pixels.clamp(1, u64::from(u32::MAX)) as u32;
+            return Size::new(sw.min(cap).max(1), 1);
         }
         sh -= 1;
     }
+}
+
+/// How many strips may be read at once so their source pixels stay inside `MAX_RESIDENT_BYTES`. A
+/// strip bigger than the budget is still read, just on its own.
+fn strips_in_flight(strip_bytes: usize, n_strips: usize) -> usize {
+    (MAX_RESIDENT_BYTES / strip_bytes.max(1)).clamp(1, n_strips.max(1))
 }
 
 /// The area read through `sampler` and downscaled by area average to `out` (straight RGBA f32,
@@ -120,6 +137,10 @@ fn read_scaled(sampler: &dyn Sampler, area: Rect, out: Size, cancelled: &(dyn Fn
     let cols = |ox: usize| (ox * sw / ow, (ox + 1) * sw / ow);
     let rows_per = (STRIP_ROWS / (sh / oh).max(1)).max(1);
     let strips: Vec<usize> = (0..oh.div_ceil(rows_per)).collect();
+    // A strip spans at most `ceil(source rows / output rows)` source rows per output row, plus one
+    // for the seam, and four bytes per source pixel.
+    let strip_bytes = (sh.div_ceil(oh) * rows_per + 1).saturating_mul(sw).saturating_mul(4);
+    let batch = strips_in_flight(strip_bytes, strips.len());
     let run = |si: &usize| -> Option<Vec<f32>> {
         if cancelled() {
             return None;
@@ -168,7 +189,13 @@ fn read_scaled(sampler: &dyn Sampler, area: Rect, out: Size, cancelled: &(dyn Fn
     #[cfg(not(target_arch = "wasm32"))]
     let parts: Vec<Option<Vec<f32>>> = {
         use rayon::prelude::*;
-        strips.par_iter().map(run).collect()
+        // A batch at a time: the strips inside a batch go out to the workers, and the batch finishes
+        // before the next one starts, so at most `batch` strips of source pixels are alive at once.
+        let mut parts = Vec::with_capacity(strips.len());
+        for chunk in strips.chunks(batch) {
+            parts.extend(chunk.par_iter().map(run).collect::<Vec<Option<Vec<f32>>>>());
+        }
+        parts
     };
     #[cfg(target_arch = "wasm32")]
     let parts: Vec<Option<Vec<f32>>> = strips.iter().map(run).collect();
