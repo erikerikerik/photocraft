@@ -22,11 +22,13 @@ existing ONNX/safetensors export may be used.
 |---|---|---|
 | SA-1B (11M images, 1B+ masks) | gated: the HF dataset `facebook/sa-1b` answers HTTP 401 until the user accepts the custom "SA-1B Dataset Agreement"; the agreement text is not published in the repo | **UNCLEAR** for commercial use |
 | SA-V (51K videos, 643K masklets) | **CC BY 4.0** | OK with attribution — `sam2/sav_dataset/README.md`: "released under the CC by 4.0 license" |
-| SAM 2.1's extra human-corrected feedback data | not published, no licence anywhere | **UNCLEAR** |
-| Anything else Meta lists in the paper beyond the above | not listed in the repo | **UNCLEAR** |
+| Meta's internal licensed video data (62.9K videos, 69.6K masklets, annotated in Phase 2 and 3) | "internally available licensed video data" - SAM 2 paper section 5, "Internal dataset", and its model card: "SAM 2 was trained on the SA-V dataset alongside internally available licensed video data". The data is not published and its terms are not public | **UNCLEAR** |
+| What SAM 2.1's checkpoints add beyond that | the repo and the paper call the 2.1 checkpoints "improved" but publish no separate training set for them | **UNCLEAR** - and note this is *absence of documentation*, not evidence of another dataset |
 
 The repo's own training code loads SA-1B and SA-V as its sample datasets (`training/README.md`), which is
-consistent with that list.
+consistent with that list. The internal-set numbers and both quotes are from arXiv:2408.00714v2 (section 5
+and the model card in appendix H.1), read on Oct 16, 2026; the earlier "human-corrected feedback data"
+row here was speculation and has been replaced.
 
 ## ONNX exports
 
@@ -40,7 +42,7 @@ No official ONNX export exists — Meta ships `.pt` only. Community exports (lin
 ## Verdict
 
 **Code and weights are clean (Apache-2.0); the training data is mixed, so it needs the same kind of
-personal-use override as BiRefNet and LaMa** — SA-1B is gated under an unpublished agreement and SAM 2.1's
-human-feedback data is unpublished, while SA-V is CC BY 4.0 (attribution). If it ever enters the CAIM
-catalog, prefer an export whose SHA-256 can be pinned and whose card states a licence, and re-check the
-gated SA-1B terms before any commercial release.
+personal-use override as BiRefNet and LaMa** — SA-1B is gated under an unpublished agreement and Meta's
+internal licensed video set is not public, while SA-V is CC BY 4.0 (attribution). If it ever enters the
+CAIM catalog, prefer an export whose SHA-256 can be pinned and whose card states a licence, and re-check
+the gated SA-1B terms before any commercial release.

@@ -43,8 +43,17 @@ Not candidates: `BiRefNet-matting-epoch_100.onnx` (alpha matting, not "find the 
 | Input | `input_image` | `[1, 3, 1024, 1024]` | float32 | **fixed**, no dynamic axis |
 | Output | `output_image` | `[1, 1, 1024, 1024]` | float32 | **logits**, measured −83.4 … +21.0 |
 
-Post-processing: `sigmoid(logit)`, threshold 0.5 for a hard mask (8-bit, 255 = subject), then resize
-back to the source size. The tiny export behaves the same (logits −22.6 … +61.0).
+Post-processing for the runner: `sigmoid(logit) * 255`, rounded to 8-bit, written at `image_size`;
+PhotoCraft then scales it up (bilinear) to `region`. **Do not threshold before writing.** Amendment 18
+(`agents/SPEC.md:279`) defines the mask result as 8-bit grayscale where 255 = subject, 0 = background and
+**between = soft edge**, so the intermediate values are the feature: they are the hair and the
+anti-aliased boundary that `layer.removeBackground` keeps (SPEC:285 defaults `refine` to `false` because
+"the model's matte is already soft") and that `select.subject` uses as coverage. Measured with
+`soft_band.py` on the general model: 1.00% of the buoy's pixels and 1.54% of the person's (16,175 px, all
+254 intermediate values present) land between 1 and 254, while total coverage barely moves (soft 0.2574
+vs hard 0.2574 on the person) - so a threshold costs edge detail, not area. Keep the 0.5 threshold only
+for evaluation metrics and for the `mask-*.png` previews in this task.
+The tiny export behaves the same (logits −22.6 … +61.0).
 
 ## Pre- and post-processing (verified, and it settles an upstream disagreement)
 
@@ -114,7 +123,7 @@ Code and weights are clean; the training data is not.
 | Weights, onnx-community mirrors | MIT (same weights, re-exported) | HF cards |
 
 Training sets of the general checkpoints (the README row for `general use`, both backbones — the list is
-identical, so no candidate has cleaner data than another):
+identical, read from the two model-zoo rows on Oct 16):
 
 | Dataset | Licence / terms | Verdict |
 |---|---|---|
@@ -125,19 +134,32 @@ identical, so no candidate has cleaner data than another):
 | HRS10K-TR_TE | no official repo found | **UNCLEAR** |
 | TR-P3M-10k, TE-P3M-500-P, TE-P3M-500-NP | **MIT** | [`JizhiziLi/P3M`](https://github.com/JizhiziLi/P3M) |
 | TR-humans | **Apache-2.0** | [`schirrmacher/humans`](https://huggingface.co/datasets/schirrmacher/humans) |
-| BRIA private data | the BiRefNet README thanks `briaai/RMBG-2.0`: "this project trained BiRefNet with their **high-quality private data**", whose weights are "for only non-commercial use" | **private, terms not published** |
+| `briaai/RMBG-2.0` - **not** this checkpoint's data | the README thanks RMBG-2.0 because *that* project trained its own BiRefNet weights with BRIA's private data; the model-zoo row for epoch_244 lists DIS5K, DUTS, HRSOD, UHRSD, HRS10K, P3M and humans, and no BRIA data | **out of this inventory** (a review round 1 correction) |
+
+### The HR candidate is on a different, bigger list
+
+`BiRefNet_HR-general-epoch_130.onnx` (2048x2048) is **not** trained on the same mix. Its model-zoo row
+adds AIM-500, AM-2k, HIM2K, PPM-100, Human-2k and Distinctions-646 (the last two synthesized with BG-20k)
+and drops DUTS. Licence check on Oct 16: PPM-100 ships inside `JizhiziLi/P3M` (**MIT**); Human-2k ships
+with `nowsyn/InstMatt`, which has **no LICENSE file** (**UNCLEAR**); AIM-500, AM-2k, HIM2K,
+Distinctions-646 and BG-20k have no licence statement in the repos or pages that host them (**UNCLEAR**).
+So HR is *more* encumbered than the two 1024x1024 candidates, not cleaner, and it also wants a
+2048x2048 input against amendment 18's 1024x1024 canvas. It is out on both counts, and the licence review
+above - not an assumption - is the reason.
 
 ## Choice, and why
 
-**BiRefNet general epoch_244** (swin_v1_large, 1024x1024). Every candidate is trained on the same flagged
-mix, so "cleanest data" is a tie and quality decides: DIS-VD S-measure 0.911 / weighted-F 0.875 for this
-checkpoint against 0.882 / 0.830 for the swin_v1_tiny (lite) one (README table, "Metric (S, wF[, HCE])").
+**BiRefNet general epoch_244** (swin_v1_large, 1024x1024). The two 1024x1024 candidates share the same
+flagged mix, so "cleanest data" is a tie between them and quality decides; HR has a bigger and equally
+unclear mix (just above) plus a 2048x2048 input, so it is out. DIS-VD S-measure 0.911 / weighted-F 0.875
+for this checkpoint against 0.882 / 0.830 for the swin_v1_tiny (lite) one (README table,
+"Metric (S, wF[, HCE])").
 Peak memory is the same for both, so the tiny model's only real advantages are a 4.3x smaller download and
 ~1.8x faster CPU runs — if Erik wants the CPU default to be the cheap one, that is his manifest call, and
 the numbers above are measured for both.
 
-D11 override needed: the weights are MIT but DIS5K is research-only and the training mix also contains
-BRIA private data, so `licence_training_data = "research-only"` plus an override like LaMa's D2.
+D11 override needed: the weights are MIT but DIS5K is research-only and DUTS/HRSOD/UHRSD/HRS10K have no
+published licence, so `licence_training_data = "research-only"` plus an override like LaMa's D2.
 
 ## Prior art (upstream, credited)
 
@@ -167,6 +189,13 @@ BRIA private data, so `licence_training_data = "research-only"` plus an override
   13,300 if the arena stays on. **A guess for other hardware; MG-11 measures it.**
 - `backends = { cpu = "supported", cuda = "untested", coreml = "untested" }` — CPU is measured here;
   amendment 18 says Auto only picks `supported`.
+- **Pin the revision, not `main`.** The catalog contract wants a pinned URL
+  (`agents/prompts/local-mg-02.md:15`), so the manifest uses HF commit hashes. Verified through the HF
+  tree API on Oct 16: `onnx-community/BiRefNet-ONNX` at `534d3c82d3bb8b2f0867db6dfbc3a525b8e42f67`
+  serves `onnx/model.onnx` with LFS oid `58f621f0...ebd3c` (the bytes we hashed), and
+  `onnx-community/BiRefNet_lite-ONNX` at `de15b22ba131738a16dff04aab8bdf8dc32e3ac1` serves the tiny
+  export with LFS oid `56000243...03333`. `9b057984031590f02a042f18187c76c8d818a26b` serves identical
+  general bytes and is an acceptable alternative pin.
 
 ## Manifest draft (CAIM catalog shape, `crates/caim/catalog/models.toml`)
 
@@ -176,8 +205,8 @@ id = "birefnet"
 version = "1"
 task = "subject_mask"
 file = "birefnet-general-epoch_244.onnx"
-url = "https://huggingface.co/onnx-community/BiRefNet-ONNX/resolve/main/onnx/model.onnx"
-revision = "main"
+url = "https://huggingface.co/onnx-community/BiRefNet-ONNX/resolve/534d3c82d3bb8b2f0867db6dfbc3a525b8e42f67/onnx/model.onnx"
+revision = "534d3c82d3bb8b2f0867db6dfbc3a525b8e42f67"
 sha256 = "58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c"
 size = 972666916
 licence_code = "MIT"
@@ -186,20 +215,22 @@ licence_training_data = "research-only"
 max_pixels = 1048576
 memory_mib = 7300
 backends = { cpu = "supported", cuda = "untested", coreml = "untested" }
-provenance = "BiRefNet general (swin_v1_large, epoch 244) from the ZhengPeng7/BiRefNet GitHub release, re-hosted by onnx-community; downloaded and checked on the CraftML PC on Oct 16, 2026 (docs/models/birefnet.md). Input 1024x1024 fixed, output logits -> sigmoid -> 255 = subject."
+provenance = "BiRefNet general (swin_v1_large, epoch 244) from the ZhengPeng7/BiRefNet GitHub release, re-hosted by onnx-community; downloaded and checked on the CraftML PC on Oct 16, 2026 (docs/models/birefnet.md). Input 1024x1024 fixed, output logits -> sigmoid * 255 -> 8-bit soft-edge mask, 255 = subject."
 
 # Draft override for Erik to sign (D11, like LaMa's D2). The wording is what `caim models install` shows.
 [model.override]
 by = "Erik"
 date = "2026-10-16"
 reason = "D11: personal use only until the training data is replaced or licensed"
-note = "BiRefNet's weights are MIT, but it was trained on DIS5K (research-only, commercial use prohibited), on DUTS/HRSOD/UHRSD/HRS10K with no published licence, and on BRIA private data. Use it for personal work only."
+note = "BiRefNet's weights are MIT, but it was trained on DIS5K (research-only, commercial use prohibited) and on DUTS/HRSOD/UHRSD/HRS10K, which have no published licence. Use it for personal work only."
 ```
 
 ## Not verified / follow-ups
 
 - `BiRefNet_HR-general-epoch_130.onnx` and `BiRefNet_lite-general-2K-epoch_232.onnx` were not downloaded
-  (both are ~1 GB / 2048x2048 or larger, and amendment 18 caps the canvas at 1024x1024 anyway).
+  (both are ~1 GB / 2048x2048 or larger, and amendment 18 caps the canvas at 1024x1024 anyway). HR's
+  training list was still inventoried and licence-checked (**The HR candidate is on a different, bigger
+  list** above); the 2K lite export's training list was not.
 - CUDA and Core ML untested; the DirectML logit collapse from #4812 is a warning for MG-11's resolver.
 - Mask quality against PhotoCraft's classical Select Subject is not measured here — that is MG-10's golden
   IoU test.
