@@ -2,6 +2,14 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (evening): Codex-Strata (autopilot) - SY-02 upstream sync, and the four rows that went with it
+
+- SY-02: `git merge --no-ff upstream/main` into `sync/upstream-2026-10-16`, cut from `origin/main` `08525996`. Upstream `2a952f16` ("Windows/Linux: open files in the running PhotoCraft instead of a second instance (#3708) (#3755)"), 232 commits past SY-01's `c699e3cd`, 425 files, +34,409 / -3,229, merge commit `32ab88a1`. Nothing of ours moved: no `agents/`, no `crates/ai-client/`, no `crates/engine/src/ai*.rs` or `generative_cmds*`.
+- Three conflicts. Ours: `apps/photocraft/src/main.rs:511`, where I kept `PhotocraftApp::new(with_ai(Session::new()), services)` and took upstream's new `app.min_frame_ms` line. Not ours, so I stopped and reported them and Erik approved both ("resolve both as proposed"): `contributors/people.toml` kept both `[people.erikerikerik]` and `[people.sidney]`; `docs/scorecard.md` took upstream's line and then `cargo xtask scorecard` regenerated it - 632 of 632 menu items live, never-crash lints on 30 of 30 crates (commit `9dd71b93`).
+- Gates on the merged tree: guards 18 of 18 - photocraft 10 of 10 in 576.9 s from this branch's own checkout (`logs\guards-20261016-2104.txt`), craft-ai-manager 8 of 8 in 62.6 s (`logs\guards-20261016-2114.txt`); `xtask layers`, `xtask wasm` (20 crates plus codecs/heif), `xtask parity` 632/632, `panic_hunt -- --ignored` 1 passed, `photocraft-ai-client` 39 passed. The eight CAIM failures in the first guard run were my own `CARGO_NET_OFFLINE=true` (ort-sys will not link unless it can fetch ONNX Runtime), not the merge.
+- Also today, all merged: MG-09 (craft-ai-manager #4, `3aca441`), MG-07 (#5, `fb80254`), MG-08 clean Ctrl+C shutdown (#6, `e8a8cda`), PC-07 guard runner (photocraft #17, `08525996`), and photocraft #18 (`fddec082`) which set those four rows to done and, after a Codex P2, brought PC-07's receipt in line with what actually happened.
+- PC-06 still waits on Erik's five-minute check; autopilot does not touch it. Receipt: `agents/receipts/SY-02.md`.
+
 ## 2026-10-16 (midday): Codex-Strata (autopilot) - PC-07 review round 4: the runner has a test of its own
 
 - Same branch and PR #17; the new commit follows `0e85097c`, review that commit only. Fourth push, past SPEC 17's two rounds, at Erik's request.
