@@ -316,3 +316,8 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
       - **MAS-06:** Generative Fill on macOS, evaluated separately (ONNX Runtime + Core ML first; MLX only if measured to matter).
     - **Hardware tiers (not promises until benchmarked):** M1 16 GB baseline; M2–M4 24 GB main target (the M3 Mac mini); 32 GB+ for generative work.
     - **Release work later:** signing, hardened runtime, notarization, `.app` bundles and a DMG.
+20. **Bug hunt before every milestone closes (Erik, Oct 17).** A milestone is not signed off until a bug hunt like the M1 one (`agents/reviews/2026-10-14-m1-bug-hunt.md`) has run over everything the milestone added, so later work never builds on a broken piece.
+    - **When:** after the last feature task of the milestone merges, before its sign-off task (M2: BH-02 before PC-12). Fix-now still applies during the milestone; this is the sweep at the end.
+    - **Who:** someone other than the authors. Claude plans and leads it; Codex-cloud reviews independently, and Codex-Strata fixes. Findings go in `agents/reviews/<date>-<milestone>-bug-hunt.md`, each with a severity, a file and line, and a repro.
+    - **Scope:** both repos, everything the milestone touched. Protocol edge cases (both sides of the wire, old and new peers), cancel and error paths, resource limits, licence-gate and security rules (loopback only, token, no secrets, no pickle), and the guards themselves (does each guard still test what it claims?).
+    - **Rule:** every P0 and P1 finding is fixed, each with a test that would have caught it, before sign-off. P2s are fixed too unless Erik defers one in writing. Bugs found in upstream code go the UP-xx route (D13).
