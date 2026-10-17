@@ -121,32 +121,31 @@ impl AiProvider for FakeProvider {
             }
             AiOutput::Mask { coverage, size }
         } else {
-        let mut pixels = req.pixels.clone();
-        // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
-        // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
-        // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
-        for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
-            if *coverage > 0.0 {
-                for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
-                    *sample = 0.75;
-                }
-                // The sample after the colour channels, when the format has one.
-                if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
-                    *alpha = 1.0;
+            let mut pixels = req.pixels.clone();
+            // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
+            // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
+            // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
+            for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
+                if *coverage > 0.0 {
+                    for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
+                        *sample = 0.75;
+                    }
+                    // The sample after the colour channels, when the format has one.
+                    if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
+                        *alpha = 1.0;
+                    }
                 }
             }
-        }
-        if self.bad_pixel
-            && let Some(sample) = pixels.first_mut()
-        {
-            *sample = f32::NAN;
-        }
-        if self.wrong_size {
-            pixels.pop();
-        }
-        AiOutput::Image { pixels, format: if self.wrong_format { PixelFormat::GRAY8 } else { req.format } }
-        }
-        ;
+            if self.bad_pixel
+                && let Some(sample) = pixels.first_mut()
+            {
+                *sample = f32::NAN;
+            }
+            if self.wrong_size {
+                pixels.pop();
+            }
+            AiOutput::Image { pixels, format: if self.wrong_format { PixelFormat::GRAY8 } else { req.format } }
+        };
         Ok(AiResult {
             window: if self.wrong_window { req.window.translate(1, 0) } else { req.window },
             output,
@@ -175,7 +174,7 @@ impl AiProvider for FakeProvider {
         drop(s);
         if self.cancel_fails { Err(AiError::Other("Cancellation could not reach the provider".into())) } else { Ok(()) }
     }
-    fn max_pixels(&self, task: AiTask) -> Result<Option<u64>, AiError> {
+    fn max_pixels(&self, _task: AiTask) -> Result<Option<u64>, AiError> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner).limit_asks += 1;
         self.max_pixels.clone().unwrap_or(Ok(None))
     }

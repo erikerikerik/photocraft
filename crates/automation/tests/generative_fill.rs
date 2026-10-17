@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use photocraft_automation::{Backend, Headless, PhotocraftMcp};
-use photocraft_engine::ai::{AiError, AiJobId, AiOutput, AiProvenance, AiProvider, AiRequest, AiResult, AiTask};
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvenance, AiProvider, AiRequest, AiResult, AiTask};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};

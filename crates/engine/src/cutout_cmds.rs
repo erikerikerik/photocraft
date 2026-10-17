@@ -16,10 +16,10 @@ const CMD: &str = "layer.removeBackground";
 
 /// Edge refinement after Select Subject: a narrow smart radius and a little smoothing, so soft
 /// edges and hair get partial coverage instead of a hard cut.
-const REFINE: RefineParams = RefineParams { radius: 2.0, smart_radius: true, smooth: 10.0, feather: 0.5, contrast: 10.0, shift_edge: 0.0 };
+pub(crate) const REFINE: RefineParams = RefineParams { radius: 2.0, smart_radius: true, smooth: 10.0, feather: 0.5, contrast: 10.0, shift_edge: 0.0 };
 
 /// Remove Background needs an unlocked pixel layer.
-fn check(doc: &Document, l: &Layer) -> std::result::Result<(), String> {
+pub(crate) fn check(doc: &Document, l: &Layer) -> std::result::Result<(), String> {
     if !matches!(l.content, LayerContent::Raster(_)) {
         return Err(format!("the layer is {} {} layer, not a pixel layer", l.content.article(), l.content.kind_name()));
     }
@@ -36,6 +36,10 @@ fn enabled(s: &Session) -> std::result::Result<(), String> {
 }
 
 fn run(s: &mut Session, p: &Value) -> Result<Value> {
+    // "method": "ai" goes to the AI path (amendment 18); everything below is the classical path.
+    if matches!(crate::ai_segment_cmds::method(p, CMD)?, crate::ai_segment_cmds::Method::Ai) {
+        return crate::ai_segment_cmds::remove_background(s, p);
+    }
     let id = layer_param(s, p)?;
     let doc = &s.active().ok_or(EngineError::NoDocument)?.doc;
     check(doc, doc.layer(id).ok_or(EngineError::NoLayer(id))?).map_err(EngineError::Other)?;
@@ -82,7 +86,7 @@ pub fn specs() -> Vec<CommandSpec> {
         label: "Remove Background",
         menu: &[],
         shortcut: None,
-        params: r##"{"layer":id?,"sampleAllLayers":bool=false,"refine":bool=true} → {layer,bounds} (adds a layer mask from Select Subject; the Background becomes a normal layer)"##,
+        params: r##"{"layer":id?,"sampleAllLayers":bool=false,"refine":bool=true,"method":"classical|ai"="classical"} → {layer,bounds,ai?} (adds a layer mask from Select Subject; the Background becomes a normal layer; ai: the Craft AI Manager subject model, which needs the model installed and leaves refine off unless asked)"##,
         enabled,
         run,
         journal: true,

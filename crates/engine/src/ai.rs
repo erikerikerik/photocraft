@@ -68,10 +68,16 @@ pub enum AiJobState {
 /// What a provider produced: pixels for the requested window, or a mask at the size it received.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AiOutput {
-    Image { pixels: Vec<f32>, format: PixelFormat },
+    Image {
+        pixels: Vec<f32>,
+        format: PixelFormat,
+    },
     /// One finite value in 0..=1 per pixel, row-major, at `size`: the size the provider received,
     /// which for a mask task is the downscaled image, not the document area.
-    Mask { coverage: Vec<f32>, size: Size },
+    Mask {
+        coverage: Vec<f32>,
+        size: Size,
+    },
 }
 
 /// Where the work ran, as the provider reported it (amendment 18). Every field is optional:
@@ -208,9 +214,12 @@ impl AiRequest {
         self.sent_size.unwrap_or_else(|| self.window.size())
     }
 
-    /// Check geometry and buffer layout before a provider receives the request.
+    /// Check geometry and buffer layout before a provider receives the request. The buffers are
+    /// checked against [`AiRequest::sent_image_size`], which is the window's own size for a
+    /// fill and the downscaled size a mask task sends (amendment 18).
     pub fn validate(&self) -> Result<(), AiError> {
-        let (pixels, samples) = sample_count(self.window.size(), self.format)?;
+        let sent = self.sent_image_size();
+        let (pixels, samples) = sample_count(sent, self.format)?;
         if self.pixels.len() != samples || self.coverage.len() != pixels {
             return Err(AiError::Other("The AI image or selection size does not match its window".into()));
         }
