@@ -31,6 +31,9 @@ pub struct Part<'a> {
 pub fn job_json(req: &AiRequest, bit_depth: u8, channels: u8) -> Result<Vec<u8>, AiError> {
     let too_large = || AiError::Other("The area to fill is too large for Craft AI Manager.".into());
     let size = req.window.size();
+    // The image's own size, which for a mask task is the downscaled one (amendment 18); the
+    // region stays the document area the window describes.
+    let sent = req.sent_image_size();
     let Ok(width) = i32::try_from(size.width) else {
         return Err(too_large());
     };
@@ -52,7 +55,7 @@ pub fn job_json(req: &AiRequest, bit_depth: u8, channels: u8) -> Result<Vec<u8>,
     }
     let body = JobJson {
         task: req.task.id(),
-        image_size: [size.width, size.height],
+        image_size: [sent.width, sent.height],
         region: [req.window.x0, req.window.y0, width, height],
         bit_depth,
         channels,

@@ -13,10 +13,13 @@ fn ai_submit_poll_result_happy_path() {
     assert!(matches!(p.poll(&id).unwrap(), AiJobState::Running { .. }));
     assert_eq!(p.poll(&id).unwrap(), AiJobState::Done);
     let r = p.result(&id).unwrap();
+    let AiOutput::Image { pixels, .. } = &r.output else {
+        panic!("a fill request gets an image back");
+    };
     // Amendment 16: the fill at full strength wherever coverage > 0 (the 0.5 pixel too), the input
     // where it is 0, and a covered pixel made opaque. PhotoCraft blends by coverage when it
     // composites the layer, once.
-    assert_eq!(r.pixels, vec![0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 1.0, 0.75, 0.75, 0.75, 1.0]);
+    assert_eq!(pixels, &vec![0.25, 0.25, 0.25, 0.25, 0.75, 0.75, 0.75, 1.0, 0.75, 0.75, 0.75, 1.0]);
     assert_eq!(req.pixels, vec![0.25; 12]);
     let json = serde_json::to_value(&r).unwrap();
     assert_eq!(json["model"], "solid-fill");
@@ -36,9 +39,12 @@ fn ai_the_fake_makes_a_covered_pixel_opaque() {
         let req = request(format);
         let id = p.submit(&req).unwrap();
         let r = p.result(&id).unwrap();
+        let AiOutput::Image { pixels, .. } = &r.output else {
+            panic!("a fill request gets an image back");
+        };
         let (n, colour) = (format.channels(), format.mode.color_channels());
         for (at, coverage) in [0.0f32, 0.5, 1.0].into_iter().enumerate() {
-            let pixel = &r.pixels[at * n..(at + 1) * n];
+            let pixel = &pixels[at * n..(at + 1) * n];
             let filled = coverage > 0.0;
             let want = if filled { 0.75 } else { 0.25 };
             assert_eq!(&pixel[..colour], vec![want; colour].as_slice(), "{format:?} at coverage {coverage}: the colour channels");
@@ -59,7 +65,7 @@ fn ai_completion_progress_reaches_one_at_all_depths_and_layouts() {
         let r = run_to_completion(&p, &req, &ctx, Duration::ZERO).unwrap();
         assert_eq!(ctx.fraction(), 1.0);
         assert_eq!(ctx.message(), "AI job complete");
-        assert_eq!(r.format, format);
+        assert!(matches!(&r.output, AiOutput::Image { format: got, .. } if *got == format), "the format comes back as it went");
         assert_eq!(r.window, req.window);
     }
 }

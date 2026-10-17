@@ -10,7 +10,7 @@ use std::time::Duration;
 use photocraft_color::{ColorMode, SampleType};
 use serde_json::{Value, json};
 
-use crate::ai::{self, AiError, AiRequest, AiTask};
+use crate::ai::{self, AiError, AiOutput, AiRequest, AiTask};
 use crate::commands::CommandSpec;
 use crate::edit_menu_cmds::{self, FillWindow, FilledWindow};
 use crate::{EngineError, Result, Session};
@@ -105,6 +105,7 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
             let req = AiRequest {
                 task: AiTask::FillMaskedArea,
                 window,
+                sent_size: None,
                 pixels: img,
                 format: fmt,
                 coverage,
@@ -118,7 +119,11 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
             let result = ai::run_to_completion(provider.as_ref(), &req, ctx, POLL_EVERY).map_err(EngineError::from)?;
             ctx.progress(1.0, LABEL);
             let ai = provenance(&result);
-            Ok((FilledWindow { filled: result.pixels, bounds, original, cover, n_hole }, ai))
+            // A fill asked for pixels; a mask back would be a provider bug, not a document one.
+            let AiOutput::Image { pixels, .. } = result.output else {
+                return Err(EngineError::Other("The AI provider returned a mask to a fill request".into()));
+            };
+            Ok((FilledWindow { filled: pixels, bounds, original, cover, n_hole }, ai))
         },
         move |s, (done, ai)| {
             let name = s.active().map_or_else(|| LABEL.to_string(), |st| edit_menu_cmds::fill_layer_name(&st.doc, LABEL));
