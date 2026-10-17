@@ -140,18 +140,27 @@ identical, read from the two model-zoo rows on Oct 16):
 
 `BiRefNet_HR-general-epoch_130.onnx` (2048x2048) is **not** trained on the same mix. Its model-zoo row
 adds AIM-500, AM-2k, HIM2K, PPM-100, Human-2k and Distinctions-646 (the last two synthesized with BG-20k)
-and drops DUTS. Licence check on Oct 16: PPM-100 ships inside `JizhiziLi/P3M` (**MIT**); Human-2k ships
-with `nowsyn/InstMatt`, which has **no LICENSE file** (**UNCLEAR**); AIM-500, AM-2k, HIM2K,
-Distinctions-646 and BG-20k have no licence statement in the repos or pages that host them (**UNCLEAR**).
-So HR is *more* encumbered than the two 1024x1024 candidates, not cleaner, and it also wants a
-2048x2048 input against amendment 18's 1024x1024 canvas. It is out on both counts, and the licence review
-above - not an assumption - is the reason.
+and drops DUTS. Licence check on Oct 16, one row per dataset the two 1024x1024 candidates do not already
+have:
+
+| Dataset (HR only) | Licence / terms, as found Oct 16 | Verdict |
+|---|---|---|
+| PPM-100 | the repo is [`ZHKKKe/PPM`](https://github.com/ZHKKKe/PPM), **not** part of `JizhiziLi/P3M` (P3M's README never mentions PPM at all); its README License section says "All annotated alpha mattes in PPM are released under the Creative Commons Attribution NonCommercial ShareAlike 4.0 license", and only the Flickr source portraits allow commercial use; the repo itself has no LICENSE file (license API: 404) | **non-commercial - CC BY-NC-SA 4.0** ([README, License](https://github.com/ZHKKKe/PPM#license)). Round 2 correction: an earlier draft conflated PPM-100 with P3M and called it MIT |
+| Human-2k | ships with `nowsyn/InstMatt`, which has **no LICENSE file** (license API: 404) | **UNCLEAR** |
+| AIM-500, AM-2k, HIM2K | no licence statement in the repos or pages that host them | **UNCLEAR** |
+| Distinctions-646 + BG-20k | synthesized from the two; neither states a licence | **UNCLEAR** |
+
+So HR is *more* encumbered than the two 1024x1024 candidates, not cleaner: it adds an explicit
+non-commercial dataset on top of the unclear ones, and it wants a 2048x2048 input against amendment 18's
+1024x1024 canvas. It is out on both counts, and the licence review above - not an assumption - is the
+reason.
 
 ## Choice, and why
 
 **BiRefNet general epoch_244** (swin_v1_large, 1024x1024). The two 1024x1024 candidates share the same
-flagged mix, so "cleanest data" is a tie between them and quality decides; HR has a bigger and equally
-unclear mix (just above) plus a 2048x2048 input, so it is out. DIS-VD S-measure 0.911 / weighted-F 0.875
+flagged mix, so "cleanest data" is a tie between them and quality decides; HR's mix is bigger and adds an
+explicit non-commercial dataset (PPM-100, CC BY-NC-SA 4.0) on top of the unclear ones, plus a 2048x2048
+input, so it is out. DIS-VD S-measure 0.911 / weighted-F 0.875
 for this checkpoint against 0.882 / 0.830 for the swin_v1_tiny (lite) one (README table,
 "Metric (S, wF[, HCE])").
 Peak memory is the same for both, so the tiny model's only real advantages are a 4.3x smaller download and
