@@ -1,5 +1,15 @@
 # HANDOFF
 
+## 2026-10-17: Codex-Strata (autopilot) - MG-12 review round 3: two P2s, and the two-round cap is reached
+
+- **CAIM PR #7 has used its two fix rounds, so round 3 is reported, not fixed.** Round 1 (`9cd3309`) fixed four findings. Round 2 (`b63ee97`) fixed one P1 - a takeover renamed the abandoned `.part`, and on Unix that is the same inode, so an owner that was still writing could poison the file we were about to verify; it now copies the bytes it resumes from into its own `.part` - plus two P2s: a note that counts the whole file asked for `Range: bytes=<size>-` and got 416 forever, and one socket read can hand back half a status line, which made `caim open` decide a live manager was dead. All four CAIM checks are green on `b63ee97` (ubuntu 39s, windows 1m32s, deny 22s, msrv 37s); 250 tests pass locally.
+- **Round 3 found two more P2s, both real, both the same shape as the one just fixed:**
+  - `crates/caim/src/main.rs:102` - `caim open` looks for a manager and then starts one, so two `caim open` processes at once can both decide there is none and both serve: the loser keeps running but is undiscoverable, and both write the same `activity.jsonl`. Decide-and-start needs a launch lock.
+  - `crates/caim/src/endpoint.rs:258` - a manager with every connection slot busy answers the health probe with 503 (`server.rs:408-410`), and `health_is_answering` accepts only 200, so a busy manager reads as absent and `caim open` starts a second one on top of its endpoint file. The probe has to tell a busy CAIM from nothing there.
+- **Erik decides #7.** Either authorise a third fix round (both look small: a lock file around the launch path, and treating 503 as alive) or merge as-is and carry the two as known gaps. Nothing was pushed after `b63ee97`, so the review state on that commit stays readable.
+- **MG-12 stays `review`.** The row and queue notes merged as PR #22, merge commit `120c094a`.
+- **Nothing else is startable, so autopilot stops here.** PC-08 waits on SY-02 (PR #19: all checks green including FreeBSD, but `main` has moved since, so it conflicts again, and Codex-cloud's three unresolved P2s are all upstream files - Erik's call); MG-10 waits on D12; MG-11 on MG-10; PC-09 on PC-08; PC-11 on PC-08; PC-10 on PC-09; MG-13 on UI-01; CN-03 and CN-05 on CN-00 and CN-02 (Erik).
+
 ## 2026-10-16 (late night): Codex-Strata (autopilot) - MG-12 in review (CAIM PR #7)
 
 - **MG-12 is in review.** CAIM PR #7 (`ai/mg-12-resume-launch`, from CAIM `main` `e8a8cda`) does all four things amendment 18 asks for: restart-safe resume, `app.json`, `caim open`, `activity.jsonl`. Receipt: CAIM `agents/receipts/MG-12.md`. No new dependency, and CAIM's `deny` / `msrv` / ubuntu jobs are green on the PR.
