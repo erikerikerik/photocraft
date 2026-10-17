@@ -1,4 +1,4 @@
-# TASKS: PhotoCraft AI, Milestone 1
+# TASKS: PhotoCraft AI, Milestones 1 and 2
 
 Read `agents/SPEC.md` (including the v1.1 amendments) and `agents/FEATURES.md` (the master checklist and its rules) first. Tasks here are work units; FEATURES.md says what counts as done. One row per task. Update the status when you start (`doing`) and finish (`done`, `blocked: why`). Branch per task: `ai/<id>-<short-name>`, e.g. `ai/pc-01-provider-trait`.
 
@@ -16,10 +16,13 @@ Every PhotoCraft task also passes the AGENTS.md §5 gate for the crates it touch
 | D2 | done | big-lama weights. **Decided (Erik, Oct 13): accept for now** for M1. **Oct 14:** RedLamp's licence research rates pretrained Big-LaMa "avoid" (Places2 training data is non-commercial), so it stays **M1 / personal use only**: CAIM marks it as flagged (training data), asks for one acknowledgment before download, and it is replaced before any public CAIM release (D7). | Unblocks MG-02. |
 | D3 | done | Manager's name: **Craft AI Manager (CAIM)**. Repo name: `erikerikerik/craft-ai-manager` unless Erik picks another. | Unblocks MG-00. |
 | D4 | todo | Comment on upstream #41 describing the provider-trait hook? | Yes, short, once PC-02 works on the fork, so it shows working code. |
-| D5 | todo | Start the manager on demand or in the tray? | M1: started by hand; PhotoCraft only shows "not running". Decide in step 2. |
+| D5 | done | Start the manager on demand or in the tray? **Decided (Erik, Oct 16): on demand** for M2, from PhotoCraft's "Open Craft AI Manager" button (SPEC amendment 18); tray (CAIM-09) later. | Unblocks PC-10, MG-12. |
 | D6 | todo | Run a **measurement-only** performance investigation of PhotoCraft's renderer (UP-01) and report it to upstream as an issue? No code changes in our fork. | Optional. Cheap for the local agent and useful to upstream (3 of 25 budgets met), but outside our AI scope; only if you want to build goodwill with the maintainers. |
 | D7 | todo | Before any **public** CAIM release: replace LaMa with a fill model whose training data is clean, or ship without a learned fill (PhotoCraft's classical Content-Aware Fill stays)? | Decide when CAIM is close to public. Training our own (RedLamp's plan) costs thousands of GPU-hours. |
 | D8 | done | Craft AI Manager repo and licence. **Decided (Erik, Oct 14):** public repo `erikerikerik/craft-ai-manager`, **PolyForm Noncommercial 1.0.0**; Erik is likely to relicense to MIT or Apache-2.0 if the PhotoCraft maintainers ask. PhotoCraft talks to CAIM only over loopback HTTP, so the two licences don't mix. | Unblocks MG-00. |
+| D9 | done | Which model for Select Subject and Remove Background? **Decided (Erik, Oct 16): BiRefNet for both**; SAM 2.1 goes to Object Select (AI-C04) after M2 and never blocks M2. | Unblocks RS-01, MG-10. |
+| D10 | done | DirectML in M2? **Decided (Erik, Oct 16): later.** M2 Auto = CUDA, then CPU. | Narrows MG-11. |
+| D11 | done | A new model flagged on training data? **Decided (Erik, Oct 16): allowed under a personal-use override like D2**, with the exact licence or dataset issue in its manifest entry. | Unblocks MG-10 if RS-01 finds a flag. |
 
 ## Machine setup (Erik, admin account unless noted)
 
@@ -86,3 +89,22 @@ Every PhotoCraft task also passes the AGENTS.md §5 gate for the crates it touch
 4. Then **PC-04, PC-05**, and **PC-06** to close Milestone 1.
 
 **Conductor track:** CN-00 and CN-01 first (Erik). CN-03 can start as soon as PC-07 (the guard script) exists. Until the conductor runs, tasks are started by hand with the prompts in `agents/prompts/`.
+
+## Milestone 2 (SPEC amendment 18)
+
+Done-when list, protocol additions and order: SPEC amendment 18. Phases: **A** CPU features, **B** CUDA and provenance, **C** CAIM window and the button, **D** sync and sign-off. A task is ready for autopilot (amendment 17) only once its prompt file exists; Claude writes them phase by phase.
+
+| ID | Status | Owner | Task | Depends | Test that must pass |
+|---|---|---|---|---|---|
+| AM-18 | done | Claude | SPEC amendment 18, FEATURES M2 targets, these rows, RS-01 prompt. Branch `ai/m2-planning`. | none | docs only |
+| RS-01 | todo | local | **Phase A.** Model check for BiRefNet (following MG-03's format): pick the checkpoint, verify an existing ONNX file, SHA-256, tensors, pre- and post-processing, cold-load and warm CPU times, and the licence of code, weights and **each training dataset**. SAM 2.1: licence and training data only, non-blocking. Output `agents/models/birefnet.md` and `agents/models/sam2.md`. Prompt: `agents/prompts/local-rs-01.md`. | D9 | Script exits 0; the `.md` files exist; SHA-256 recorded |
+| PC-08 | todo | local | **Phase A.** Engine: mask results in `ai.rs` (an image or a mask output), the downscale-before-send and bilinear upscale of amendment 18, `select.subject` and `layer.removeBackground` gain `"method": "ai"` (default `classical`, existing tests untouched), provenance fields in both command results, `FakeProvider` mask mode; parity and `panic_hunt`. Regression: every Generative Fill test unchanged and passing. | AM-18 | `cargo test -p photocraft-engine --lib ai`; `--lib generative`; `--lib smartselect`; `--lib cutout`; `cargo xtask parity`; `panic_hunt -- --ignored` |
+| PC-09 | todo | local | **Phase A.** `photocraft-ai-client`: read `output`, `ready`, `model` from `/v1/tasks`; accept an 8-bit grayscale `result.png` for mask tasks; parse the new result fields; B20 compatibility tests against M1-shaped and M2-shaped fake managers. | AM-18 | `cargo test -p photocraft-ai-client` |
+| MG-10 | todo | local | **Phase A.** CAIM: task-to-model routing (catalog maps `subject_mask` → BiRefNet), the mask result path, the BiRefNet runner per RS-01, the new result fields (version, SHA-256, requested device, `load_ms`, `run_ms`), `ready` in `/v1/tasks`, the 400 "isn't installed" answer, manifest entry (with D11 override if RS-01 flags it) and a golden mask test (CC0 photo, IoU against a committed mask within tolerance). Regression: LaMa golden test unchanged. | RS-01, AM-18 | `cargo test`; golden tests `-- --ignored`; clippy; fmt |
+| MG-11 | todo | local | **Phase B.** CAIM CUDA: ONNX Runtime CUDA execution provider, CUDA libraries as an optional verified download, Auto = CUDA then CPU, free-VRAM check against the manifest's `vram_mib`, every fallback reason of amendment 18 with a test that forces it, `caim serve --device`; CUDA vs CPU results within tolerance; cold/first/warm timings for both tasks on the 4090 in the receipt. | MG-10 | `cargo test`; manual timing table on the 4090 |
+| PC-11 | todo | local | **Phase B.** Provenance on layers (B16, U04): where PhotoCraft can keep per-layer metadata, store model id, version, SHA-256 and device for Generative Fill layers and AI-masked layers, and show them in Properties. **If this needs a document-format change outside our files, stop and ask Erik.** | PC-08 | engine test on layer metadata; snapshot PNG (U10) |
+| UI-01 | todo | Claude | **Phase C.** Finish the CAIM 1d design (first run, ready, working, error), plus the PhotoCraft message with its one button. Spec for MG-13. | none | Erik approves the design |
+| MG-12 | todo | local | **Phase C.** CAIM backend for the window: restart-safe resume (`.part` + `.part.json`, Range, re-hash), `app.json`, `caim open`, `activity.jsonl` (newest 1,000 lines). | MG-02, AM-18 | `cargo test` incl. a resume-after-restart test against a local Range server |
+| MG-13 | todo | local | **Phase C.** The CAIM window (egui) built to UI-01: model list, add/remove, download progress, acknowledgment, disk use, last job, Details footer. | UI-01, MG-12 | `cargo test`; screenshots of the three states in the receipt |
+| PC-10 | todo | local | **Phase C.** "Open Craft AI Manager": the button in the AI messages (not running, not installed, model missing) runs `app.json`'s path per amendment 18, native apps only; U11 wording. | PC-09, MG-12 | `cargo test -p photocraft-cli`; manual: CAIM closed → button starts it |
+| PC-12 | todo | local + Erik | **Phase D.** M2 end to end on the 4090: the amendment 18 done-when list, screenshots, Erik's hands-on sign-off. | all above, latest SY sync | the ten items in amendment 18 |
