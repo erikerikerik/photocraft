@@ -12,6 +12,19 @@ Task **MG-10** from the PhotoCraft fork's `agents/TASKS.md`. Work in `craft-ai-m
 - `agents/models/birefnet.md` from RS-01 (the checkpoint, URL, SHA-256, tensors, pre- and post-processing, manifest draft)
 - CAIM's `src/catalog.rs`, `src/models.rs`, `src/lama.rs`, `src/job.rs`, `src/protocol.rs`, `src/server.rs` and `tests/golden.rs`
 
+**D12 (Erik, Oct 17) - use exactly this:**
+- **Checkpoint: BiRefNet_lite** (swin_v1_tiny), not general. Source: `onnx-community/BiRefNet_lite-ONNX`, file `onnx/model.onnx` (fp32), 224,005,088 bytes, SHA-256 `5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333` (RS-01 and upstream #2995 both verified it). **Pin the URL to a commit revision of that repo, never `main`**: find the commit, record it in the catalog, and re-check the hash after download.
+- **Session:** create it with ONNX Runtime's CPU memory arena **off**. RS-01 measured a 12.1 GiB peak with the arena on and 6.4 GiB with it off. Set `memory_mib = 6600` from that measurement.
+- **Override (D11, signed by Erik):** `licence_training_data = "research-only"` plus
+  ```toml
+  [model.override]
+  by = "Erik"
+  date = "2026-10-17"
+  reason = "D11/D12: non-commercial use only until the training data is replaced or licensed"
+  note = "BiRefNet's weights are MIT, but it was trained on DIS5K (research-only, commercial use prohibited) and on DUTS, HRSOD, UHRSD and HRS10K, which have no published licence. Non-commercial use only: not for paid or client jobs."
+  ```
+- Model id `birefnet-lite`, version `1`.
+
 **Do:**
 1. **Catalog:** add BiRefNet from RS-01's manifest draft (task `subject_mask`), with the new fields `memory_mib` and `backends` (`cpu = "supported"`, `cuda = "untested"`, `coreml = "untested"`). Add the fields to LaMa too (`backends`: cpu supported; `memory_mib` from MG-04's measurements, or a stated guess). If RS-01 flagged the training data, add a `[model.override]` (D11) with the exact dataset issue as its note. The licence gate and its CI must pass.
 2. **Routing:** one place maps a task to the installed model that serves it. Runners never pick models.
