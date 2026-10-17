@@ -19,7 +19,7 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 
 | ✓ | ID | Feature | Photoshop equivalent | Target | Size | Owner | Blockers | Status | Receipt |
 |---|---|---|---|---|---|---|---|---|---|
-| [ ] | AI-C01 | Fill a selection with no prompt (remove an object): LaMa on the CPU | Edit › Generative Fill, empty prompt | M1 | L | local | | todo | |
+| [x] | AI-C01 | Fill a selection with no prompt (remove an object): LaMa on the CPU | Edit › Generative Fill, empty prompt | M1 | L | local | | done (PC-06) | |
 | [ ] | AI-C02 | Remove tool "Generative AI" mode: brush over lines, wires, blemishes and the AI fills them. Today's Remove tool is classical (scorecard TOOL-213-19 lists AI mode as missing). | Remove tool › Generative AI | S1.5 | M | | AI-C01 | todo | |
 | [ ] | AI-C03 | Select Subject with an ML model, offered next to the classical one | Select › Subject (Device / Cloud) | S2 | M | | CAIM-02 | todo | |
 | [ ] | AI-C04 | Select Object by click or box (SAM2 / MobileSAM) | Object Selection tool | S2 | M | | AI-C03 | todo | |
@@ -44,10 +44,10 @@ Rules every capability must pass. A capability isn't done until each rule that a
 | [x] | B01 | **Non-destructive:** the result is a new layer or a mask; the source pixels never change | Engine test: source layer identical before and after | M1 | done (PC-02) |
 | [x] | B02 | **One undo step** removes the result | Engine test | M1 | done (PC-02) |
 | [x] | B03 | **Background job:** progress shown, Esc cancels, document locked while it runs; cancel leaves the document unchanged | Engine test with `FakeProvider` | M1 | done (PC-02) |
-| [ ] | B04 | **No manager, no problem:** PhotoCraft works as today; AI commands say "Craft AI Manager isn't running" with a way to open it | Client test + manual check | M1 | todo |
+| [ ] | B04 | **No manager, no problem:** PhotoCraft works as today; AI commands say "Craft AI Manager isn't running" with a way to open it | Client test + manual check | M1 | message done (PC-06); "a way to open it" still todo |
 | [x] | B05 | **Never crashes:** any params or document state gives an error, never a panic | `cargo test -p photocraft-engine --test panic_hunt -- --ignored` | M1 | done (PC-02) |
-| [ ] | B06 | **Every action is a command**, drivable over MCP and the control channel | Automation test | M1 | todo |
-| [ ] | B07 | **Offline after first use:** models SHA-256 checked, unknown files refused, ONNX / safetensors only | Manager tests | M1 | todo |
+| [x] | B06 | **Every action is a command**, drivable over MCP and the control channel | Automation test | M1 | done (PC-05) |
+| [x] | B07 | **Offline after first use:** models SHA-256 checked, unknown files refused, ONNX / safetensors only | Manager tests | M1 | done (MG-02) |
 | [x] | B08 | **Says where it ran:** model, device, local or cloud, time taken | Result JSON test; shown by U04 | M1 | done (PC-04) |
 | [ ] | B09 | **Nothing leaves the PC without consent:** web jobs show "uploads to X" first | Manager test + manual | S4 | todo |
 | [x] | B10 | **Colour:** RGB at 8/16/32-bit; Gray, CMYK, Lab and indexed give a clear "not supported yet" | Engine test at three bit depths | M1 | done (PC-02) |
@@ -66,9 +66,9 @@ Every UI row also passes U10.
 
 | ✓ | ID | UI element | Target | Size | Owner | Blockers | Status | Receipt |
 |---|---|---|---|---|---|---|---|---|
-| [ ] | U01 | Edit › Generative Fill… menu item, enabled when there's a selection | M1 | S | local (Claude designs) | | todo | |
-| [ ] | U02 | Generative Fill runs straight away in M1 (no prompt). From S3: a small prompt bar under the selection (prompt field, Generate, Cancel); empty prompt = remove | M1 / S3 | S / M | | AI-C07 | todo | |
-| [ ] | U03 | Progress and Cancel in the existing jobs UI (`crates/ui-egui/src/jobs_ui.rs`) | M1 | S | local (Claude designs) | AI-C01 | todo | |
+| [x] | U01 | Edit › Generative Fill… menu item, enabled when there's a selection | M1 | S | local (Claude designs) | | done (PC-02) | |
+| [ ] | U02 | Generative Fill runs straight away in M1 (no prompt). From S3: a small prompt bar under the selection (prompt field, Generate, Cancel); empty prompt = remove | M1 / S3 | S / M | | AI-C07 | M1 part done (PC-06); prompt bar is S3 | |
+| [x] | U03 | Progress and Cancel in the existing jobs UI (`crates/ui-egui/src/jobs_ui.rs`) | M1 | S | local (Claude designs) | AI-C01 | done (PC-06) | |
 | [ ] | U04 | Result layer named "Generative Fill"; Properties panel shows prompt, model (name, version), device and time (B16) | S2 | M | | AI-C01 | todo | |
 | [ ] | U05 | Variations: ‹ 1 / 3 › with thumbnails in Properties | S3 | M | | AI-C07 | todo | |
 | [ ] | U06 | Contextual Task Bar under a selection (Generative Fill, Select Subject, Remove Background). PhotoCraft has none yet (`docs/ui-parity.md` lists it missing), so this is a general feature worth offering upstream on its own | S2 | L | | D4 | todo | |

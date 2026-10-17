@@ -2,6 +2,13 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16: Claude (Milestone 1 closed)
+
+- **Erik signed off PC-06** after his hands-on check: Generative Fill removes an object through Craft AI Manager and LaMa on the CPU, undoes in one step, cancels cleanly, and says "Craft AI Manager isn't running" when the manager is off. **Milestone 1 is done.**
+- Overnight autopilot merged MG-09, MG-07, MG-08 (CAIM #4–#6) and PC-07 (#17). SY-02 waits on Erik's "resolve both as proposed" (contributors/people.toml keep both; regenerate docs/scorecard.md).
+- FEATURES ticked: AI-C01, B06, B07, U01, U03. Partial: U02 (prompt bar is S3), B04 ("a way to open the manager" still todo). Open M1-era items: B12 (big-image timing), D7 (LaMa replacement before any public release).
+- Next: plan Milestone 2 (Step 2: catalog, CUDA, Select Subject) in a fresh chat.
+
 ## 2026-10-16 (midday): Codex-Strata (autopilot) - PC-07 review round 4: the runner has a test of its own
 
 - Same branch and PR #17; the new commit follows `0e85097c`, review that commit only. Fourth push, past SPEC 17's two rounds, at Erik's request.
