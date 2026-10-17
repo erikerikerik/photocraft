@@ -294,6 +294,10 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
       - **One resolver.** CAIM has exactly one place that picks the backend: it takes the task, the model's manifest entry, the device setting (CAIM-04, or `caim serve --device auto|cuda|cpu` for tests) and what the machine has, and returns the backend, the device name and the fallback chain. Runners never choose a device themselves.
       - **CUDA stays in its own module**, behind a small enum of ONNX Runtime execution providers plus that resolver: no CUDA checks scattered through runners, no `ComputeBackend` trait. A trait is reconsidered only if a non-ONNX runtime (for example MLX) ever becomes necessary.
       - One GPU job at a time.
+    - **Prior art upstream (checked Oct 16; all open PRs, none merged, no maintainer replies).**
+      - **Generative Fill:** #2878 (`ImageProvider` trait, Gemini), #3703 and #6209 (nine cloud providers, own keys), #6054 (self-hosted ComfyUI / A1111). #2878 and #6209 **use our command id `edit.generativeFill`**. If one merges, the SY sync that brings it in stops and asks: the plan is to make CAIM one provider behind their trait rather than keep two commands. #6054's ComfyUI workflows are a reference for step 3, and #6209's credential handling for step 4.
+      - **BiRefNet:** #2995 (Select Subject "High quality", BiRefNet-lite via `tract`, creates `photocraft-ml`) and #4812 (Remove Background via ONNX Runtime, OpenVINO, then DirectML, then CPU). Their licence findings feed RS-01; their pre/post-processing and provider fallback may be reused in CAIM with credit (upstream is MIT OR Apache-2.0).
+      - **#3826** (segmentation provider, ComfyUI) is unfinished. **#5916** ("Craft AI", a local-LLM assistant window) is a different feature, but its name and its shared ArtCraft models folder are close to ours; keep CAIM's folder `CraftAI` and say "Craft AI Manager" in full in the UI.
     - **Order:**
       1. **A (CPU):** RS-01, PC-08, PC-09, MG-10. Ends with Select Subject and Remove Background working on the CPU (model installed by CLI).
       2. **B:** MG-11 (CUDA), PC-11 (provenance on layers).

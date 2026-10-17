@@ -8,6 +8,10 @@ Task **RS-01** from `agents/TASKS.md`. Like MG-03 (`agents/models/lama.md` is th
 
 **Safety:** download only `.onnx` (and `.json` / `.md` / `README` files). Never load `.pth`, `.pt`, `.ckpt` or `.bin`, never use `pickle` or `torch.load`, and don't convert a checkpoint yourself. If no usable ONNX file exists for a checkpoint, record that and move on.
 
+**Part 0: read the prior art first (Oct 16)**
+
+Two open upstream PRs already use BiRefNet. Read both pages (description and changed files, no need to build them): [#2995](https://github.com/storytold/photocraft/pull/2995) (BiRefNet-lite through `tract`; its `ATTRIBUTION.md` flags DIS5K's training-data terms; ONNX Runtime took 13–19 s there and DirectML ran out of memory) and [#4812](https://github.com/storytold/photocraft/pull/4812) (BiRefNet general and HR through ONNX Runtime; dropped RMBG after a licence objection). Note where their ONNX files came from, their pre- and post-processing, their timings and their licence findings. **Reuse what they found, but verify it yourself**; credit them in `birefnet.md` wherever their finding saved work. Upstream code is MIT OR Apache-2.0.
+
 **Part 1: BiRefNet (blocking for M2)**
 
 1. Find the official BiRefNet checkpoints (Hugging Face `ZhengPeng7/*` and the ONNX files attached to the GitHub releases of `ZhengPeng7/BiRefNet`), plus any community ONNX export of them. List up to four candidates that fit "find the main subject in a photo" (for example general, lite, HR, matting): repo, file, revision or release tag, size, input size, fixed or dynamic shape.
