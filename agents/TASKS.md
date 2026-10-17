@@ -23,6 +23,8 @@ Every PhotoCraft task also passes the AGENTS.md §5 gate for the crates it touch
 | D9 | done | Which model for Select Subject and Remove Background? **Decided (Erik, Oct 16): BiRefNet for both**; SAM 2.1 goes to Object Select (AI-C04) after M2 and never blocks M2. | Unblocks RS-01, MG-10. |
 | D10 | done | DirectML in M2? **Decided (Erik, Oct 16): later.** M2 Auto = CUDA, then CPU. | Narrows MG-11. |
 | D11 | done | A new model flagged on training data? **Decided (Erik, Oct 16): allowed under a personal-use override like D2**, with the exact licence or dataset issue in its manifest entry. | Unblocks MG-10 if RS-01 finds a flag. |
+| D13 | done | Bugs in upstream code found by our review? **Decided (Erik, Oct 17): fix them now and offer the fixes upstream** - one small upstream PR per bug from a branch cut from `upstream/main` (no `agents/` or AI code), a polite note to the author, and the same fix cherry-picked into the fork so we keep moving. The only deliberate exception to amendment 12. Task UP-02. | Unblocks UP-02. |
+| D14 | done | SY-02 and MG-12. **Decided (Erik, Oct 17):** merge SY-02 once CI is green (Claude merged `main` into the sync branch, agents/ files only); MG-12 (CAIM PR #7) gets a **third fix round** for its two P2s (launch lock for `caim open`, a 503 health answer means "running"), then merges on approval and green CI. Standing rule from Erik: move forward, fix bugs now, don't creep scope, security first. | Unblocks PC-08, MG-12. |
 | D12 | todo | **Blocks MG-10.** BiRefNet for MG-10: (a) sign the D11 override wording drafted in `agents/models/birefnet.md`, and (b) pick the CPU default checkpoint - general (972 MB, better masks) or tiny/lite (224 MB, ~1.8x faster, same peak RAM)? | Decide before MG-10 starts: the manifest entry needs (a), the default download needs (b). Unblocks MG-10. |
 
 ## Machine setup (Erik, admin account unless noted)
@@ -109,6 +111,7 @@ Done-when list, protocol additions and order: SPEC amendment 18. Phases: **A** C
 | MG-13 | todo | local | **Phase C.** The CAIM window (egui) built to UI-01: model list, add/remove, download progress, acknowledgment, disk use, last job, Details footer. | UI-01, MG-12 | `cargo test`; screenshots of the three states in the receipt |
 | PC-10 | todo | local | **Phase C.** "Open Craft AI Manager": the button in the AI messages (not running, not installed, model missing) runs `app.json`'s path per amendment 18, native apps only; U11 wording. | PC-09, MG-12 | `cargo test -p photocraft-cli`; manual: CAIM closed → button starts it |
 | PC-12 | todo | local + Erik | **Phase D.** M2 end to end on the 4090: the amendment 18 done-when list, screenshots, Erik's hands-on sign-off. | all above, latest SY sync | the ten items in amendment 18 |
+| UP-02 | todo | local | Fix the three upstream bugs from SY-02's review (Linux portal save extension, Layer › Export As size, env-only second launch); one upstream PR each, cut from `upstream/main` (D13); the fixes cherry-picked into the fork. Prompt: `agents/prompts/local-up-02.md`. | SY-02 | Each fix has a failing-then-passing test; AGENTS.md §5 gate per crate |
 
 ## MAS: Apple Silicon Native (parked, SPEC amendment 19)
 
