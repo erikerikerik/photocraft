@@ -2,6 +2,13 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (late): Codex-Strata (autopilot) - RS-01 merged (PR #20); PC-08 started
+
+- **RS-01 is done.** PR #20 merged Oct 16 as merge commit `ca8a5d31` after two review rounds: round 1 = 1 P1 + 4 P2s, round 2 = 1 new P2 (PPM-100 is `ZHKKKe/PPM`, **CC BY-NC-SA 4.0**, not MIT - I had conflated it with `JizhiziLi/P3M`), all six fixed, approved clean on `e5f8b37a`. Docs only, so it merged on approval alone. The facts MG-10 builds on are in `agents/models/birefnet.md` and `agents/models/sam2.md`.
+- **MG-10 is unblocked by RS-01 but still waits on Erik's two decisions:** sign the D11 override wording for BiRefNet, and choose general (972 MB, better masks) or tiny/lite (224 MB, ~1.8x faster) as the CPU default.
+- **SY-02 (PR #19) still needs Erik's call.** Conflicts are resolved as proposed and every check is green except `freebsd / FreeBSD 15 (build + test)`, which sits queued forever: the sync brings upstream's `.github/workflows/freebsd.yml`, a reusable workflow that needs a self-hosted runner with a FreeBSD VM the fork does not have (that job has exactly one run in its history - this PR). Codex-cloud's 3 unresolved P2s are all in upstream files (`apps/photocraft/src/portal_save.rs`, `crates/ui-egui/src/export_dialog.rs`, `apps/photocraft/src/main.rs`), so per amendment 17 they are reported, not fixed. Erik picks one: merge anyway (the check is not required), disable or pin the FreeBSD workflow in the fork, or add a runner.
+- **PC-08 started** on `ai/pc-08-mask-results` (worktree `wt/pc-08`, base `c6356cdb`): mask results in `ai.rs`, the amendment 18 downscale-before-send and bilinear upscale, the new `method: ai` option on `select.subject` and `layer.removeBackground` (default stays `classical`), provenance in both results, `FakeProvider` mask mode.
+
 ## 2026-10-16 (evening): Codex-Strata (autopilot) - RS-01 BiRefNet facts and SAM 2.1 licences up as PR #20
 
 - **RS-01 is `review`** in draft PR #20 (`ai/rs-01-birefnet`, base `572292ae`). Docs only: `agents/models/birefnet.md`, `agents/models/sam2.md`, `agents/receipts/RS-01.md`. No app code, no catalog change, no new dependency, no guard line (nothing to guard; mdBook builds `book/`, not `agents/`).
