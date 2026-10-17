@@ -2,6 +2,17 @@
 
 Update this at the end of every session: newest entry on top, keep it short.
 
+## 2026-10-16 (evening): Codex-Strata (autopilot) - RS-01 BiRefNet facts and SAM 2.1 licences up as PR #20
+
+- **RS-01 is `review`** in draft PR #20 (`ai/rs-01-birefnet`, base `572292ae`). Docs only: `agents/models/birefnet.md`, `agents/models/sam2.md`, `agents/receipts/RS-01.md`. No app code, no catalog change, no new dependency, no guard line (nothing to guard; mdBook builds `book/`, not `agents/`).
+- **Chosen checkpoint:** BiRefNet general epoch_244, `onnx-community/BiRefNet-ONNX onnx/model.onnx`, 972,666,916 bytes, SHA-256 `58f621f0...ebd3c` - identical to the HF LFS oid. The tiny/lite export (224,005,088, `56000243...03333`) matches upstream #2995's pin exactly. opset 17, input `input_image` 1x3x1024x1024 **fixed**, output `output_image` 1x1x1024x1024 **logits** (sigmoid, 0.5, 255 = subject). Preprocess: stretch to 1024x1024 bilinear, RGB/255, mean 0.485/0.456/0.406, std 0.229/0.224/0.225.
+- **The number that matters: peak RSS 12.98 GiB with ONNX Runtime's CPU arena on (the default), 7.13 GiB with `enable_cpu_mem_arena=False`** (steady 1.17 GiB, ~4% slower). Thread count 4/16/32 changes nothing, so the graph owns it. Suggested `memory_mib = 7300`. A 16 GB laptop cannot hold the default arena.
+- Times on the 7950X: general load 5,124/5,231/5,065 ms, warm median 7,624/7,557/7,873 ms; tiny load ~3.7 s, warm median ~4.1 s. fp16 exports give byte-identical masks (IoU 1.0000) but are ~25% slower on CPU - they save download bytes only.
+- Upstream's claim (#4812) that ImageNet normalisation is "the wrong contract" is contradicted by the official repo, the HF `preprocessor_config.json` and our own A/B: stretch vs grey-pad x ImageNet vs 0.5 all agree at IoU 0.996-0.999.
+- Licences: BiRefNet code and weights **MIT**, but DIS5K is research-only, DUTS/HRSOD/UHRSD/HRS10K are UNCLEAR and the README thanks BRIA "high-quality private data" - so the D11 override draft is in `birefnet.md` for Erik to sign. SAM 2.1 code and weights **Apache-2.0**; SA-1B is gated behind an unpublished agreement (UNCLEAR), SA-V is CC BY 4.0.
+- **Erik owes two RS-01 decisions:** sign the D11 override wording, and pick general (972 MB, better masks) or tiny/lite (4.3x smaller, ~1.8x faster, same RAM) as the CPU default. MG-10 waits on both.
+- SY-02 (#19) is unchanged at `a7167b1b`: every check green except `freebsd`, still pending; Codex-cloud's review still lists three unresolved P2s, all in upstream files (`apps/photocraft/src/portal_save.rs:169`, `crates/ui-egui/src/export_dialog.rs:93`, `apps/photocraft/src/main.rs:223`), which per amendment 17 we report rather than change.
+
 ## 2026-10-16: Claude (Milestone 1 closed)
 
 - **Erik signed off PC-06** after his hands-on check: Generative Fill removes an object through Craft AI Manager and LaMa on the CPU, undoes in one step, cancels cleanly, and says "Craft AI Manager isn't running" when the manager is off. **Milestone 1 is done.**
