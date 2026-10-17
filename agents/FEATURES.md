@@ -59,7 +59,7 @@ Rules every capability must pass. A capability isn't done until each rule that a
 | [ ] | B16 | **Model pinned:** every AI result carries the model id, version, SHA-256 and device. A layer made or masked by AI stores them (Properties, U04); non-layer results (Select Subject) return them in the command result and CAIM's activity log. A model update never changes existing layers | Engine test: layer metadata after a fill and after AI Remove Background; CAIM test: result carries them | M2 | todo |
 | [x] | B17 | **Training data counts:** a model is commercial-safe only if its code, weights and training data are; anything else needs Erik's recorded override and a user acknowledgment before download | CAIM licence-gate test (CAIM-11) | M1 | done (MG-02) |
 | [ ] | B18 | **Interactive AI stays live:** a newer interactive request replaces a queued one (latest-wins), and batch work yields to interactive work | CAIM scheduler tests (CAIM-12) | S2 | todo |
-| [ ] | B19 | **Says why it ran there:** every result reports the device requested (auto / cuda / cpu), the device that ran, and the fallback reason if they differ | CAIM tests forcing each fallback (no CUDA, init failure, low VRAM, run failure) | M2 | todo |
+| [ ] | B19 | **Says why it ran there:** every result reports the backend requested (auto / cuda / cpu), the backend that ran (`device`), the hardware (`device_name`) and a backend-neutral fallback reason if they differ | CAIM tests forcing each fallback (backend unavailable, init failure, insufficient memory, unsupported model, execution failure) | M2 | todo |
 | [ ] | B20 | **Protocol stays compatible:** adding a task or result kind never changes an existing task's bytes; M1-shaped and M2-shaped peers work together both ways | Protocol tests on both sides (amendment 18) | M2 | todo |
 
 ## 3. How it looks
@@ -102,6 +102,7 @@ Every UI row also passes U10.
 
 | Date | Change |
 |---|---|
+| 2026-10-16 | B19 made backend-neutral (amendment 18 revision); MAS block parked (amendment 19) |
 | 2026-10-16 | Milestone 2 planned (SPEC amendment 18): AI-C03, AI-C05, B16, CAIM-02–05, CAIM-10, U04, U08 targeted M2; AI-C04 and CAIM-09 moved later (D9, D5); added B19 (device reporting) and B20 (protocol compatibility) |
 | 2026-10-14 | B08 ticked (PC-04, reviewed by Claude) |
 | 2026-10-14 | Added AI-C13 (C2PA), AI-C14 (agent workflows), B16–B18, CAIM-11–13 from the upstream check, ChatGPT review and RedLamp research (`agents/RESEARCH.md`) |
