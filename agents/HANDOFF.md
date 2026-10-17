@@ -1,5 +1,13 @@
 # HANDOFF
 
+## 2026-10-17: Codex-Strata (autopilot) - SY-02: the one red CI job was our own flaky test harness
+
+- **SY-02 (PR #19)** had one real failure on `fb0e4cf3`: `test (ubuntu-latest)`, in `an_early_401_during_a_large_upload_is_reported_as_the_token_message` (`crates/ai-client/src/tests.rs:655`), `captured.len()` 0 where 1 is asserted. The 2 s `test (windows-latest)` failure is the aggregate gate mirroring it (`TEST: failure`), not a second failure; corpus, wasm, web, eval, mdBook, lint, both windows test jobs and the AppImage check were green and FreeBSD was still finishing.
+- The race is in our harness, not in the sync: the fake manager's early-reply path (`crates/ai-client/src/fake_server.rs:134`) answered the 401, drained the ~25 MB still in flight, and only then recorded the request - so the test could ask what the manager saw before the record existed. Recording now happens before the drain. Test code only, one file, which is the amendment 15 case (a test-only fix that turns a red `main` green) and supersedes the "reported, not fixed" note in the receipt and the PR body.
+- Gates: `cargo test -p photocraft-ai-client` 39 passed / 0 failed; 15 consecutive runs of the two early-reply tests, 0 failures; `cargo clippy -p photocraft-ai-client --all-targets -- -D warnings` 0; guards 10 of 10 in 155.4 s (`E:\CraftML\work\logs\guards-20261017-0854.txt`).
+- **Next:** CI on the new head. D14 says merge SY-02 once it is green (`gh pr ready 19`, then `gh pr merge 19 --merge`), then the docs PR that sets the SY-02 row `done` and unblocks PC-08 and UP-02.
+- **MG-12 (CAIM PR #7) round 3 is pushed** as `34d3d06`: a launch lock around `caim open`'s decide-and-start, and a 503 health answer counts as running. All four CAIM checks are green on it; the `@codex review` re-review has not come back, so Erik may need to paste a review prompt into Codex-cloud.
+
 ## 2026-10-17 (morning): Claude - Erik's calls: SY-02 merge, MG-12 round 3, UP-02
 
 - **SY-02 (PR #19):** Claude merged `origin/main` into `sync/upstream-2026-10-16` (`4c70253`; only `agents/` files, the HANDOFF conflict keeps both sides). FreeBSD now passes. **Merge when CI is green** (D14); the three upstream P2s are not fixed in the sync, they become UP-02.

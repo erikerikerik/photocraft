@@ -140,8 +140,11 @@ fn serve_one(mut stream: TcpStream, replies: Replies, captured: Arc<Mutex<Vec<Ca
         let _ = stream.flush();
         let _ = stream.shutdown(Shutdown::Write);
         let announced = content_length.saturating_sub(request.body.len());
-        discard(&mut stream, announced);
+        // Record the head before waiting for the rest of the body. A client that reads this early
+        // answer can finish while those bytes are still arriving, and a test that asks what the
+        // fake manager saw would find nothing yet.
         captured.lock().unwrap_or_else(PoisonError::into_inner).push(request);
+        discard(&mut stream, announced);
         return;
     }
     read_body(&mut stream, &mut request.body, content_length);
