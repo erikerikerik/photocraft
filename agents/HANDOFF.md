@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-18 (01:20): Claude - night run: D16, UP-02 ready to merge
+
+- **D16 (Erik):** MG-10 gets a **third fix round** on CAIM PR #8 before it merges: bound `width*height` in `birefnet.rs`'s public resamplers and fix the mask 413 wording. Exact steps are at the top of the autopilot order. Claude re-reviews round 3.
+- **UP-02 (PR #29):** Codex-cloud approved, CI and FreeBSD green on `dd0410f`. It conflicted only in this file, so Claude merged `main` in (`61f92bf`, both sides kept) and dispatched FreeBSD on the new head. Claude merges it when CI and FreeBSD are green, then SY-03 is unblocked.
+- **Merged tonight:** PR #31 (check-in docs: MG-10 review, PC-11 prompt), PR #32 (v0.10.0 review: BF-04, SY-03).
+- **Queue for autopilot:** MG-10 round 3, MG-12 final round, BF-04, SY-03 (after UP-02), MG-11 (after MG-10), PC-11. PC-09 stays with Codex-cloud.
+
 ## 2026-10-18 (early): Claude (check-in) - MG-10 reviewed, PC-11 prompt
 
 - **MG-10 (CAIM PR #8, parked):** Claude's independent review of `d60ff1a` is **APPROVE**, and CI is green. Codex-cloud's leftover P2 (`birefnet.rs:102`, axis product not bounded) is only reachable from a library caller that skips `JobRequest::validate`, so it went to BH-02 instead of a third round. The merge waits on Erik's reply. MG-11 is unblocked once it merges.
