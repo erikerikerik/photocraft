@@ -35,7 +35,7 @@ fn f(p: &Value, k: &str, d: f32) -> f32 {
 fn b(p: &Value, k: &str, d: bool) -> bool {
     p.get(k).and_then(Value::as_bool).unwrap_or(d)
 }
-fn mode(p: &Value, default: &str) -> SelectionMode {
+pub(crate) fn mode(p: &Value, default: &str) -> SelectionMode {
     let m = p.get("mode").and_then(Value::as_str).unwrap_or(default);
     SelectionMode::parse(if m == "new" { "replace" } else { m })
 }
@@ -73,7 +73,7 @@ pub(crate) fn with_doc_sampler<R>(doc: &Document, layer: Option<LayerId>, all_la
 /// caller gets `changed: false`, whatever the mode. (Select Subject and Object Selection run
 /// heuristics that often find nothing on busy photos; clearing the selection then looks like
 /// a dead button.)
-fn apply(s: &mut Session, label: &str, region: Option<&Region>, m: SelectionMode) -> Result<Value> {
+pub(crate) fn apply(s: &mut Session, label: &str, region: Option<&Region>, m: SelectionMode) -> Result<Value> {
     if region.is_none() {
         // Nothing found: leave the selection (and history) alone.
         let selected = s.active().ok_or(EngineError::NoDocument)?.doc.selection.is_some();
@@ -294,6 +294,10 @@ impl SubjectCache {
 }
 
 fn select_subject(s: &mut Session, p: &Value) -> Result<Value> {
+    // "method": "ai" goes to the AI path (amendment 18); everything below is the classical path.
+    if matches!(crate::ai_segment_cmds::method(p, "select.subject")?, crate::ai_segment_cmds::Method::Ai) {
+        return crate::ai_segment_cmds::select_subject(s, p);
+    }
     let all_layers = b(p, "sampleAllLayers", true);
     let d = s.active().ok_or(EngineError::NoDocument)?;
     // What `with_doc_sampler` samples: the active layer's pixels, else the composite.
@@ -516,7 +520,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "select.subject",
             "Subject",
             ["Select"],
-            r##"{"sampleAllLayers":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
+            r##"{"sampleAllLayers":bool=true,"mode":"replace|add|subtract|intersect"="replace","method":"classical|ai"="classical"} (ai: the Craft AI Manager subject model rather than the local heuristic; it needs the model installed)"##,
             has_doc,
             select_subject
         ),

@@ -1,5 +1,24 @@
 # HANDOFF
 
+## 2026-10-18 (early): Claude (check-in) - MG-10 reviewed, PC-11 prompt
+
+- **MG-10 (CAIM PR #8, parked):** Claude's independent review of `d60ff1a` is **APPROVE**, and CI is green. Codex-cloud's leftover P2 (`birefnet.rs:102`, axis product not bounded) is only reachable from a library caller that skips `JobRequest::validate`, so it went to BH-02 instead of a third round. The merge waits on Erik's reply. MG-11 is unblocked once it merges.
+- **PC-11 prompt written:** `agents/prompts/local-pc-11.md`. Step 0 finds the per-layer storage first, and the task stops for Erik if it needs a document-format change outside our files.
+- UP-02 (PR #29) has a FreeBSD run in progress on its head.
+
+## 2026-10-17 (night): Claude - upstream v0.10.0 checked against our work
+
+- **Upstream released v0.10.0** (`8407d9c`). Most of it (v0.9.0 to `2a952f1`) is already in the fork through SY-02; 65 commits are new. No upstream AI, ONNX or model work overlaps ours. Upstream's own Select Subject and Content-Aware Fill improvements are already in the fork.
+- **BF-04 (new, security):** upstream now refuses a group/world-readable control-token file (#5459). Our client reads `endpoint.json` without that check, so it gets the same rule. Prompt `agents/prompts/local-bf-04.md`.
+- **SY-03 (new):** sync to the **v0.10.0 tag** after UP-02 merges (UP-02 was cut from this same commit). Trial merge: two conflicts, `apps/photocraft/src/main.rs` (our `with_ai` spots) and `docs/scorecard.md`. Prompt `agents/prompts/local-sy-03.md`.
+- **MG-11 note:** PhotoCraft has its own GPU Memory preference, so CAIM's CUDA memory check must use free VRAM.
+- **Nightly FreeBSD hasn't run on the fork yet** (0 scheduled runs): GitHub turns scheduled workflows off on forks until they are enabled in the Actions tab. Claude sent the API "enable" call; the 02:17 UTC run on Oct 19 will show whether it took. Until then the per-PR FreeBSD dispatch (amendment 21) still covers every NEEDED merge.
+- Upstream's face detection (#4513, a small CNN in pure Rust, in-process) is noted as prior art only: no task.
+
+## 2026-10-17 (night): Claude - PC-08 merged
+
+- **PC-08 merged** as `8ae4263` (PR #24). Code unchanged since Claude's approval of `dbca73af`; the head only gained merges of `main`. Every check green on `20f0790`, FreeBSD included.
+- **Unblocked:** PC-09 (claimed by Codex-cloud; Erik starts it with `agents/prompts/cloud-pc-09.md`) and PC-11 (Codex-Strata).
 ## 2026-10-17 (evening): Codex-Strata (autopilot) - UP-02 in review (fork PR #29; upstream #7240 / #7241 / #7242)
 
 - **UP-02 is in review.** Fork PR **#29** (`ai/up-02-upstream-fixes`, from `main` `ee0b21ba`) cherry-picks the three fixes; receipt `agents/receipts/UP-02.md`. Upstream: storytold/photocraft **#7240** (Linux Save As with one file type offered dropped the extension: `Swatches`, not `Swatches.aco`), **#7241** (Layer > Export As opened at the document size, not the layer trimmed size), **#7242** (a second launch that sets only `PHOTOCRAFT_*` overrides handed its files to the running instance and exited before any override was read).
@@ -33,6 +52,18 @@
 - FreeBSD (SPEC 21): not needed. CAIM has no FreeBSD build, and this branch changes two `agents/` markdown files. The nightly FreeBSD schedule on `main` has not run yet (the workflow landed Oct 17), so there is no red nightly to turn into FB-xx.
 - **Next:** Codex-cloud's review of PR #8, then CAIM's CI (`deny` is already green on the head). When it merges, a small docs PR sets this row `done` with the PR number and merge commit. MG-11 waits on MG-10; PC-09 waits on PC-08, not here.
 - **Autopilot has moved on to UP-02** (D13's three upstream fixes, branches cut from `upstream/main`). Its fork-side PR will touch `agents/TASKS.md` and this file too, so whichever merges second resolves the conflict by keeping both sides.
+
+## 2026-10-17: Codex-Strata (autopilot) - PC-08 is in review (PhotoCraft PR #24)
+
+- **PC-08 is in review.** PhotoCraft PR #24, branch `ai/pc-08-mask-results` from `main` at `adca340f` (`main` merged into the branch at `9b38f2f3`, so the diff is only our files). Receipt: `agents/receipts/PC-08.md`. The parked worktree `wt/pc-08` is live: SY-02 merged, so the same-files rule no longer blocks this task.
+- **What it does, per amendment 18:** `select.subject` and `layer.removeBackground` gain `"method": "classical" | "ai"` (default `classical`, and the classical path is byte for byte what it was). The `ai` paths submit the provider task `subject_mask` in a background job, send the image downscaled by area average to `max_pixels`, take the mask back at that size, stretch it bilinearly into only the document pixels the mask can reach (edge clamped, refused over 64 megapixels), and hand it to the classical commands' own apply code - one history step, `mode` honoured, `refine` off unless asked, the layer's pixels never touched. New module `crates/engine/src/ai_segment_cmds.rs` (482 lines) plus 20 tests; each upstream command file gained a two-line `method` branch.
+- **Gates** (all green, `CARGO_TARGET_DIR=target/agent-local`): ai_segment 20, ai 179, generative 22, smartselect 16, cutout 7, ai-client 39, automation 142, `panic_hunt -- --ignored` 1; `cargo fmt --all -- --check` clean; clippy `-D warnings` clean on the two crates and on the whole workspace with `--features heif`; `xtask layers`, `scorecard --check`, `wasm`, `parity` (the checklist content did not change). Guards: 11 of 11 guard lines passed in 308.6 s (`logs/guards-20261017-1207.txt`).
+- **Two bugs found and fixed on the way:** the bilinear upscale blended the last row and column with zero instead of the edge value (it would have darkened every AI selection), and `AiRequest::validate()` checked the buffers against `window`, which would have rejected a downscaled mask request. The branch had also broken `cargo test -p photocraft-automation` by dropping `AiJobState` from an import - fixed, and the reason the gate list now includes the workspace clippy run.
+- **Review round 1 on PR #24** (reviewed commit `459019eb`): two P2s in `crates/engine/src/ai_segment_cmds.rs`, both real, both fixed. `sent_size` could send a size over `max_pixels` when one dimension had already reached one pixel (a 1200x1 document under 600 sent 1200x1); it clamps the other side now. `read_scaled` handed every strip to rayon at once, so the whole canvas could be resident - the strips go out a batch at a time under a 32 MiB budget. Gate counts moved to ai_segment 18 and ai 177.
+- **Review round 2 on PR #24** (reviewed commit `8aa781b3`): one P1 and one P2, both real, both fixed. **P1** - `upscale_bilinear` allocated one `f32` for every pixel of the document before the `Region` was cut out of it, and `file.new` allows 300,000x300,000, so a document the engine accepts could ask for 360 GB and abort the process instead of returning an error. The upscale now builds only the document pixels the mask can touch (`coverage_bbox` finds the box in the provider answer, `touched_rect` inverts the bilinear map), and `MAX_MASK_PIXELS` - the same 64 megapixel budget the AI path already works to - refuses before allocating, in the words the other size limits use. **P2** - the strip budget counted four bytes a source pixel when `Sampler::rgba` answers `[f32; 4]`, so it under-estimated every strip by four; it counts sixteen now, and `MAX_RESIDENT_BYTES` moved to 64 MiB so a 6000x4000 canvas still keeps two strips in flight. Gate counts are now ai_segment 20 and ai 179. That is the second of the two fix rounds the mandate allows, so PR #24 waits on an approval from Erik rather than on a third review.
+- **Next:** an approval from Erik on PR #24 (or a Codex-cloud review pasted in), and the one CI run on the newest head (about 1.5 h; every push restarts it). PC-09 and PC-11 wait on this merge; UP-02 is deliberately not started because it touches the same PhotoCraft files.
+- **Still Erik's:** MG-12 (CAIM PR #7) - the fifth P2 at `crates/caim/src/endpoint.rs:462` and the `msrv` flake; MG-10 waits on that merge.
+
 ## 2026-10-17 (afternoon): Claude - Erik: MG-12 final round, PC-08 under Claude's review
 
 - **MG-12 (CAIM PR #7): one final fix round, authorised by Erik (Oct 17).** Fix the fifth P2 by **owner liveness, not a timer**: the launch lock records the holder's PID (and process start time where the OS gives it); `caim open` takes the lock over only if that process is gone, never because 30 s passed. Same round: the bounded retry in `crates/caim/tests/open_command.rs:67`'s busy test. Then merge on approval and green CI; any further finding in this area goes to BH-02, not another round.
