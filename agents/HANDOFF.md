@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (16:15 UTC): Claude (check-in) - PC-09 back to local
+
+- **PC-09 returns to `local`** under SPEC amendment 23: Codex-cloud's claim (commit `7bd0fc9c`) passed 12 hours at 13:29 UTC with no branch or PR. Codex-Strata builds it from `agents/prompts/local-pc-09.md`; it is Phase A, so take it before MG-11/PC-11.
+- Nightly FreeBSD run 39106981351 is **PASS** by `freebsd_ok.py` (aarch64 excused, FB-01 stays open).
+- Still waiting on Erik: **D17** (CAIM PR #7, MG-12). Nothing else parked.
+
 ## 2026-10-18 (morning): Claude - SY-03 merged; check-in docs merged
 
 - **SY-03 merged** as `8868c68` (PR #37): the fork is on upstream **v0.10.0**. Claude's 12:30 UTC check-in approved it. The later head only merged `main` (BF-04), and FreeBSD run 39126713331 is PASS by `freebsd_ok.py`.
