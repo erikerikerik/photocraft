@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-18 (morning): Claude - SY-03 merged; check-in docs merged
+
+- **SY-03 merged** as `8868c68` (PR #37): the fork is on upstream **v0.10.0**. Claude's 12:30 UTC check-in approved it. The later head only merged `main` (BF-04), and FreeBSD run 39126713331 is PASS by `freebsd_ok.py`.
+- **PR #39 merged** (the 12:30 check-in): `agents/prompts/local-mg-11.md` written, so MG-11 is ready for autopilot. **D17** (MG-12's seventh P2) waits on Erik, with Claude's recommendation: a fourth round, option 1.
+- **Ready for autopilot now:** MG-11 (CUDA), PC-11 (layer provenance; was waiting on SY-03), UP-03 / UP-04 / UP-05 (upstream bugs found in the sync review, D13 route).
+- **PC-09** (Codex-cloud's claim) has no PR. Its 12-hour claim ends 13:29 UTC, so autopilot may take it back under SPEC 23 unless Erik starts it in Codex-cloud.
+
 > **PARKED: photocraft PR #37 (SY-03, sync to upstream v0.10.0)** - every check is green on the head and a FreeBSD run is dispatched there, but Codex-cloud's two review rounds found three P2s that are all in **upstream** files the sync takes verbatim (`crates/text/src/layout.rs:660`, `crates/ipp/src/lib.rs:145` and `:119`), which SPEC 12/17 and the sign-off rule keep out of a sync PR; they are now tasks UP-03, UP-04 and UP-05 with prompts. There is no code fix left for us to make on this branch, so the two-round cap says stop here. **Erik's choice:** say "merge #37" (the D14 precedent - SY-02 merged with three unfixed upstream P2s that became UP-02), or tell us to do UP-03/04/05 upstream-side first and merge the sync after. It blocks PC-11 and UP-03/04/05 (same files), nothing else.
 
 
