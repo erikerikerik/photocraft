@@ -1150,9 +1150,16 @@ fn a_task_that_is_not_ready_is_not_offered() {
         r#"{"tasks": [{"id": "sam2_object_select", "output": "mask"}, {"id": "subject_mask", "output": "image"}, {"id": "fill_masked_area", "output": "mask"}, {"id": "fill_masked_area"}, {"id": "fill_masked_area", "output": "image"}]}"#,
     );
     assert_eq!(provider.tasks().expect("one task survives"), vec![AiTask::FillMaskedArea]);
-    // A field of the wrong JSON type says nothing, so the M1 answer stands.
+    // Amendment 18 splits the two wrong-typed fields: `ready` of the wrong type says nothing
+    // (the M1 answer stands), but `output` of the wrong type - or no `output` at all - means
+    // `image`, which is not what a `subject_mask` answer has to be.
     server.queue_json(200, r#"{"tasks": [{"id": "subject_mask", "ready": "yes", "output": 3}]}"#);
-    assert_eq!(provider.tasks().expect("a wrong-typed field is ignored"), vec![AiTask::SubjectMask]);
+    assert_eq!(provider.tasks().expect("a wrong-typed output means image"), Vec::<AiTask>::new());
+    server.queue_json(200, r#"{"tasks": [{"id": "subject_mask", "ready": "yes"}]}"#);
+    assert_eq!(provider.tasks().expect("no output means image"), Vec::<AiTask>::new());
+    // A fill needs no `output`: the default is the shape this build expects for that id.
+    server.queue_json(200, r#"{"tasks": [{"id": "fill_masked_area", "ready": "yes", "output": 3}]}"#);
+    assert_eq!(provider.tasks().expect("a fill needs no output"), vec![AiTask::FillMaskedArea]);
     // `max_pixels` still comes from the same list, ready or not.
     server.queue_json(200, r#"{"tasks": [{"id": "subject_mask", "max_pixels": 1234, "ready": false}]}"#);
     assert_eq!(provider.max_pixels(AiTask::SubjectMask), Ok(Some(1_234)));

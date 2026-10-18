@@ -12,6 +12,8 @@ use crate::http::MAX_JSON_BODY_BYTES;
 
 /// The provider the client asks for; the manager picks the backend.
 const PROVIDER_AUTO: &str = "auto";
+/// Amendment 18: the answer shape a `GET /v1/tasks` entry means when it leaves out `output`.
+const OUTPUT_IMAGE: &str = "image";
 /// Job ids are opaque, but they are put into a URL path, so they are checked before use.
 const MAX_JOB_ID_BYTES: usize = 512;
 const MAX_PROMPT_BYTES: usize = 4096;
@@ -336,11 +338,13 @@ pub fn parse_tasks(body: &[u8]) -> Result<Vec<AiTask>, AiError> {
         if task.get("ready").and_then(Value::as_bool) == Some(false) {
             continue;
         }
-        // A missing or unreadable `output` says nothing, so the id decides. One that contradicts
-        // the id describes an answer this build could not read, so it is not offered.
-        if let Some(output) = task.get("output").and_then(Value::as_str)
-            && output != output_of(parsed)
-        {
+        // Amendment 18: an entry that leaves out `output` means `image`, so the default is
+        // resolved before the comparison rather than treated as silence. An `output` that
+        // contradicts the id describes an answer this build could not read for that id, so the
+        // task is not offered: `subject_mask` with no `output` is a manager promising an image,
+        // and offering it would submit a mask job whose result the check below rejects.
+        let output = task.get("output").and_then(Value::as_str).unwrap_or(OUTPUT_IMAGE);
+        if output != output_of(parsed) {
             continue;
         }
         if !out.contains(&parsed) {

@@ -9,6 +9,11 @@
   M1-shaped manager is answered exactly as before. 49 ai-client tests (9 new), engine `ai` 182 passed,
   clippy `-D warnings` clean, `cargo xtask layers` OK (32 crates), fmt clean, 11 of 11 guard lines.
   No engine, CAIM, UI or document-format change.
+- **Round 1 on #49** (Codex-cloud, one P2 at `crates/ai-client/src/protocol.rs:342`): a
+  `subject_mask` entry that leaves out `output` was offered, but amendment 18 says a missing
+  `output` means `image`, so such a manager has promised an image and the result check would reject
+  it. `parse_tasks` now resolves that default before comparing, and the test covers missing,
+  wrong-typed and fill-shaped cases. Second and last review round on this PR.
 - **UP-02b round 1 pushed to #47** (`68b3f2a6`): Codex-cloud's P2 was right - the receipt claimed a
   Linux build of upstream #7240 that a Windows PC cannot show, because everything #7240 changes sits
   behind `cfg(target_os = "linux")`. Narrowed to what was verified, and the Linux result is now an
