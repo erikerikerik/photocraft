@@ -4,6 +4,7 @@
 
 - Upstream has **not** fixed any of UP-02's three bugs on its own: `portal_save.rs`, `export_dialog.rs` and `single_instance.rs` are unchanged since v0.10.0. #7240, #7241 and #7242 are still open and merge with no textual conflict.
 - **#7242 would not compile on today's upstream main.** Upstream's #6499 made `launch_options` immutable. New task **UP-02b** (prompt `agents/prompts/local-up-02b.md`) merges upstream main into the branch and adds `mut`. It is queued right after MG-12 round 4.
+- Upstream's `docs/contributing.md` checked against our three PRs: Rust only, MIT/Apache, clean-room, no panics outside tests, tests, fmt and clippy, small commits. All met. One gap: a UI change needs before/after screenshots on the PR. UP-02b now makes them for #7241, and Erik attaches them.
 - Upstream CI has not run on our three PRs: a fork contributor's first PR needs a maintainer to approve the run. Claude drafted a short Discord note for Erik asking for that.
 
 ## 2026-10-18 (11:30): Claude - D17 decided; PC-09 back to local
