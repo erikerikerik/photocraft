@@ -10,7 +10,9 @@
 - **What the fix does:** `crates/ai-client/src/endpoint.rs` `read_file` now judges the handle it opened, so an
   `endpoint.json` that is not a regular file answers `NoProvider` and any Unix group/other bit answers
   `AiError::Other` naming the mode (mirrors upstream v0.10.0 #5459). Round 1's P2 - a fifo with no writer blocking
-  behind `File::open` - is fixed on the handle, with a test that goes red in five seconds rather than hanging CI.
+  behind `File::open` - is fixed by judging the name before the open (`std::fs::metadata`, a stat that opens
+  nothing), while the size and mode checks still run on the open handle; the test goes red in five seconds
+  rather than hanging CI.
 - **Still open:** PR #37 (SY-03) is parked for Erik/Claude (three upstream P2s routed to UP-03/04/05; CI green, a
   FreeBSD run `39120306219` is going on the head). PC-11 waits on SY-03. PC-09 stays Codex-cloud's until 13:29 UTC
   (12 h from claim commit `7bd0fc9c`) if it still has no PR; then it is ours under amendment 23.
