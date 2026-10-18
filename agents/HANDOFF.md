@@ -1,4 +1,10 @@
-# HANDOFF
+﻿# HANDOFF
+
+## 2026-10-18 (16:20 PT): Claude - PC-09's FreeBSD run hit an upstream flake (FB-02 / UP-06)
+
+- **PC-09 (PR #49):** CI is green and Codex-cloud approved. FreeBSD x86_64 failed one test in upstream's `photocraft-ipp`: it assumes 127.0.0.1:1 is closed, but on the VM something accepted and reset the connection. That isn't PC-09's code. Claude re-runs the failed jobs when the run finishes.
+- **UP-06** (new) fixes the test upstream, and **FB-02** tracks the flake. Autopilot now re-runs once instead of stopping (autopilot prompt).
+- Open: CAIM PR #9 (MG-11 CUDA, draft) and fork #52 (its docs). Autopilot is on them.
 
 ## 2026-10-18 (16:13 PT): Codex-Strata (autopilot) - MG-11 is in review (CAIM PR #9); PC-09 still waiting on FreeBSD
 
