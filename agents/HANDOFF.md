@@ -1,5 +1,13 @@
 # HANDOFF
 
+## 2026-10-18 (16:13 PT): Codex-Strata (autopilot) - MG-11 is in review (CAIM PR #9); PC-09 still waiting on FreeBSD
+
+- **MG-11 is `review`; CAIM PR #9** (`ai/mg-11-cuda`, head `cbf624e`, receipt CAIM `agents/receipts/MG-11.md`). One resolver, CUDA in its own module, the optional pinned CUDA/cuDNN download, all five amendment 18 fallback reasons forced by tests, `caim serve --device`, and the activity line now carrying the same device account as the result. Gates: 374 tests / 0 failed, clippy `-D warnings` clean, `cargo deny check all` 0 errors, guards 11 of 11, release CPU goldens 3 passed with the timing table amendment 18 asks for.
+- **The finding worth reading:** on this PC, with no NVIDIA runtime DLLs installed, `ep::CUDA::is_available()` returns true, the CUDA session builds and runs, and ONNX Runtime's own profiling says 3,930 of 3,930 nodes ran on `CPUExecutionProvider`. CAIM therefore preloads the DLLs from its own folder before a CUDA session exists and reads the placement back afterwards, so a silent CPU fallback is reported as `backend_init_failed` instead of a `cuda` result.
+- **Erik's decision, and the only M2 item MG-11 leaves open:** done-when item 6 ("on the 4090, Auto resolves to CUDA") is not met. Both manifests keep `cuda = "untested"` because MG-11 item 4 allows the flip only on a passing CUDA golden, and the three `#[ignore]`d card goldens fail here for a real reason - the libraries are not installed and the card has 991 of 24,564 MiB free. Free the card, run `caim cuda install --accept-note`, then `cargo test --release --test golden -- --ignored --nocapture card`; if all three pass, the flip is a two-line change plus the CUDA column of the receipt table.
+- **PC-09 (PR #49)** is unchanged and still waiting: Codex-cloud approved `badf790b`, the PR is ready, every other check is green, and FreeBSD run `39171575189` is still running (past runs take about 1 h 25 m). Merge on `freebsd_ok.py` PASS, then the docs PR that sets PC-09 to `done`.
+- **Next up:** PC-11 (layer provenance) on `ai/pc-11-layer-provenance`, then UP-03/04/05. UP-03/04/05 branches are ready to write but the token here is fork-only, so the three upstream PRs need Erik's hands.
+
 ## 2026-10-18 (15:00 PT): Claude - UP-02b closed out
 
 - **#47 merged** (`90b52ea2`). Codex-cloud's round-3 finding was a stale MG-12 bullet in HANDOFF. Claude fixed it in its own commit, so no third agent round was needed, then approved and merged. The park PR #50 is closed as superseded. UP-02b is `done`.
