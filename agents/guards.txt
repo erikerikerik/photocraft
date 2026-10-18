@@ -25,3 +25,6 @@ PC-05 | photocraft | cargo test -p photocraft-automation
 BF-02 | photocraft | cargo test -p photocraft-engine --lib --tests && cargo test -p photocraft-ai-client && cargo test -p photocraft-engine --test panic_hunt -- --ignored
 # PC-07 the guard runner itself: -Repo/-RepoPath pick the right checkout, and a missing one fails the run.
 PC-07 | photocraft | powershell -NoProfile -ExecutionPolicy Bypass -File agents/tools/test-run-guards.ps1
+# PC-08 the AI mask paths of Select Subject and Remove Background (amendment 18): the mask the
+# provider answers with becomes the selection or the layer mask, stretched to the document.
+PC-08 | photocraft | cargo test -p photocraft-engine --lib ai_segment

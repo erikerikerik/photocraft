@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest, AiResult, AiTask, TOKEN_MISMATCH};
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvider, AiRequest, AiResult, AiTask, TOKEN_MISMATCH};
 use photocraft_geom::Rect;
 
 use crate::endpoint::Endpoint;
@@ -78,6 +78,7 @@ fn request(width: u32, height: u32, format: PixelFormat) -> AiRequest {
     AiRequest {
         task: AiTask::FillMaskedArea,
         window: Rect::new(10, 20, 10 + width as i32, 20 + height as i32),
+        sent_size: None,
         pixels,
         format,
         coverage,
@@ -160,9 +161,12 @@ fn happy_path_round_trips_8_bit_pixels() {
     let result = provider.result(&id).expect("the result should be readable");
 
     assert_eq!(result.window, req.window);
-    assert_eq!(result.format, req.format);
-    assert_eq!(result.pixels.len(), req.pixels.len());
-    for (got, want) in result.pixels.iter().zip(&req.pixels) {
+    let AiOutput::Image { pixels, format } = &result.output else {
+        panic!("a fill answer is an image");
+    };
+    assert_eq!(*format, req.format);
+    assert_eq!(pixels.len(), req.pixels.len());
+    for (got, want) in pixels.iter().zip(&req.pixels) {
         assert!((got - want).abs() <= 1.0 / 255.0, "{got} is not within 1/255 of {want}");
     }
     assert_eq!(result.model, "lama-onnx");
@@ -197,7 +201,10 @@ fn happy_path_round_trips_16_bit_pixels() {
     server.queue_json(200, r#"{"model": "m", "device": "cuda", "provider": "local", "elapsed_ms": 7, "image_size": [3, 5]}"#);
     server.queue(response(200, "image/png", &png));
     let result = provider.result(&id).expect("the result should be readable");
-    for (got, want) in result.pixels.iter().zip(&req.pixels) {
+    let AiOutput::Image { pixels, .. } = &result.output else {
+        panic!("a fill answer is an image");
+    };
+    for (got, want) in pixels.iter().zip(&req.pixels) {
         assert!((got - want).abs() <= 1.0 / 65535.0, "{got} is not within 1/65535 of {want}");
     }
 }
@@ -406,7 +413,10 @@ fn the_result_png_must_match_the_window_that_was_sent() {
 
     // And the good one still works, so the checks above are not just failing everything.
     let result = submit_and_fetch(&server, &endpoint, &req, &good, "image/png").expect("the result should be readable");
-    assert_eq!(result.pixels.len(), req.pixels.len());
+    let AiOutput::Image { pixels, .. } = &result.output else {
+        panic!("a fill answer is an image");
+    };
+    assert_eq!(pixels.len(), req.pixels.len());
 }
 
 #[test]
@@ -487,6 +497,7 @@ fn a_request_that_does_not_match_its_window_is_refused() {
     let empty = AiRequest {
         task: AiTask::FillMaskedArea,
         window: Rect::EMPTY,
+        sent_size: None,
         pixels: Vec::new(),
         format: RGB8,
         coverage: Vec::new(),

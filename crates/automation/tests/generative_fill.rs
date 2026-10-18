@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use photocraft_automation::{Backend, Headless, PhotocraftMcp};
-use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest, AiResult, AiTask};
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvenance, AiProvider, AiRequest, AiResult, AiTask};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};
@@ -77,12 +77,12 @@ impl AiProvider for FakeFill {
         }
         Ok(AiResult {
             window: req.window,
-            pixels,
-            format: req.format,
+            output: AiOutput::Image { pixels, format: req.format },
             model: "solid-fill".into(),
             device: "CPU".into(),
             provider: "local fake".into(),
             elapsed_ms: 12,
+            provenance: AiProvenance::default(),
         })
     }
     fn cancel(&self, id: &AiJobId) -> Result<(), AiError> {
