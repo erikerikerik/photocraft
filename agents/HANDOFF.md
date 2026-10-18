@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (11:30): Claude - D17 decided; PC-09 back to local
+
+- **D17 (Erik):** MG-12 gets **round 4, option 1** on CAIM PR #7: keep the lock file linked (no unlink in `Drop` or before locking), plus a test that never sees two `Taken`. Claude reviews it, and it merges on approval and green CAIM CI. This unblocks MG-13 and PC-10.
+- **PC-09** goes back to `local`: Codex-cloud's 12-hour claim ran out with no PR, and Erik said yes. Prompt `agents/prompts/local-pc-09.md`.
+- **Autopilot order:** MG-12 round 4, PC-09, MG-11, PC-11, UP-03/04/05.
+
 ## 2026-10-18 (morning): Claude - SY-03 merged; check-in docs merged
 
 - **SY-03 merged** as `8868c68` (PR #37): the fork is on upstream **v0.10.0**. Claude's 12:30 UTC check-in approved it. The later head only merged `main` (BF-04), and FreeBSD run 39126713331 is PASS by `freebsd_ok.py`.
