@@ -1,5 +1,41 @@
 # HANDOFF
 
+## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
+
+- **UP-02b is `review`; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
+  upstream storytold/photocraft#7242, now has `e2fb9ee8` (a clean `--no-ff` merge of `upstream/main`
+  `9185b64b`) and `a1c9743e`, which adds `mut` to the `launch_options` destructuring upstream #6499
+  made immutable - the smallest fix, and nothing else in our change moved. Gates on that tree:
+  `cargo test -p photocraft --bins --tests` 164 passed / 0 failed, clippy clean, `cargo xtask layers`
+  OK, `cargo fmt --check` clean. Pushed as a fast-forward, then one comment on #7242.
+- **#7240 and #7241 merge onto `9185b64b` with no conflicts** (local merges `8e90c608` and `38b183af`).
+  #7241's tests pass on the merged tree (ui-egui lib 3056 passed / 0 failed). #7240 changes only
+  Linux-gated code, so Windows cannot compile it: its Linux build is **not** verified, and upstream's
+  Actions run for our PRs is still `action_required` (a maintainer has to approve it). Nothing was
+  pushed to either PR, and both worktree branches were reset back to their pushed heads.
+- **Round 1 on #47** (Codex-cloud, one P2 at `agents/receipts/UP-02.md:211`): the receipt claimed more
+  than a Windows PC can show about #7240. Narrowed, as above. Also `84df1468` on
+  `upfix/env-launch-options` (CodeRabbit on #7242): the `mut` on `launch_options` moves inside the
+  non-macOS block, so macOS builds stop warning about an unused `mut`. No behaviour change, and
+  upstream CI has no macOS leg, so it is hygiene.
+- **Erik, one drag and drop:** #7241 needs before/after screenshots (upstream `docs/contributing.md`).
+  They are `E:\CraftML\work\shots\7241-before.png` (Image Size opens at 40 x 30) and
+  `E:\CraftML\work\shots\7241-after.png` (10 x 6). The comment text is in the UP-02 receipt; the
+  GitHub API cannot attach images.
+- **Round 2 on #47** (Codex-cloud, one P2 at `agents/receipts/UP-02.md:264`): the SY-04 guidance
+  below was stale the moment `84df1468` landed - it still told the next sync to keep
+  `mut launch_options` on the destructuring, which would undo that warning fix. Rewritten here and
+  in the receipt to preserve the block-local binding. Second and last review round on this PR.
+- **SY-04 note:** when the next sync meets upstream #6499, keep the shape `84df1468` gives
+  `apps/photocraft/src/main.rs`: the `launch_options` field of the `LaunchArgs` destructuring is
+  **not** `mut`, and the mutable binding is made inside the
+  `#[cfg(not(target_os = "macos"))]` block that folds the env values. Do not put `mut` back on the
+  destructured field - that is the warning `84df1468` removed.
+- **MG-12 round 4** was approved by Claude and merged as CAIM `b4306981` (see the entry below). Nothing left to do there.
+- **Machine note:** the real cargo home is read-only to the sandbox and git https needs
+  `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
+  settings are in the UP-02 receipt's Oct 18 follow-up.
+
 ## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
 
 - **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.
