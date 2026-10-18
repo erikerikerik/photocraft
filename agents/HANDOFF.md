@@ -1,5 +1,20 @@
 # HANDOFF
 
+> **PARKED: photocraft PR #47 (UP-02b, docs-only)** - the work is done and pushed: upstream #7242's head `84df1468` merges today's `9185b64b` and builds again, and both Codex-cloud review rounds were fixed. Its **third** review (21:07 UTC, on `be2c88ef`) found one more P2 at `agents/HANDOFF.md:35` - the entry still tells the next agent to merge CAIM PR #7, which Claude merged as `b4306981` while this PR was open. That is a two-line delete in a handoff bullet, but SPEC amendment 17 caps this PR at two fix rounds, so the loop stops here. **Erik's choice:** (1) delete those two lines on `ai/up-02b-status` and say "merge #47" - the `needs-freebsd` gate is the only check left (`gh workflow run freebsd.yml --repo erikerikerik/photocraft --ref ai/up-02b-status`, then `python agents/tools/freebsd_ok.py <run-id>`); (2) say "merge #47" as it stands and Claude deletes the bullet in its next check-in; (3) close it - the upstream fix is already pushed, so only the receipt text in `agents/receipts/UP-02.md` is lost. It blocks nothing else.
+
+## 2026-10-18 (21:25 UTC): Codex-Strata (autopilot) - UP-02b parked after two review rounds
+
+- **Round 3 on #47** (Codex-cloud, on `be2c88ef`): one P2 at `agents/HANDOFF.md:35`. Merging `origin/main`
+  into `ai/up-02b-status` left both sides of an MG-12 conflict in one entry - the new "MG-12 merged as
+  `b4306981`" bullet and the older "MG-12 round 4 ... waits on Claude's review, then `gh pr ready 7` and
+  `gh pr merge 7 --merge`" bullet. The second is stale guidance sitting at the top of the handoff, so the
+  next agent could chase an already-merged PR. Correct, and it is our text, not upstream's.
+- **Two fix rounds are spent** (round 1 at `agents/receipts/UP-02.md:211`, round 2 at `:264`), so the PR is
+  parked instead of pushed again: label `parked`, note at the top of this file. Nothing else in the three
+  reviews was questioned - the narrowed #7240 claim, the SY-04 shape note and the upstream rebase all stand.
+- **Carried on:** PC-09 round 1 is pushed to #49 as `1717af9c` (a missing `output` in `/v1/tasks` means
+  `image`, so it now hides `subject_mask` instead of offering it), and MG-11 (CUDA in CAIM) starts next.
+
 ## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
 
 - **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.
