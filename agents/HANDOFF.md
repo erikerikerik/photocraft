@@ -4,7 +4,16 @@
 
 - **MG-10 (CAIM PR #8, parked):** Claude's independent review of `d60ff1a` is **APPROVE**, and CI is green. Codex-cloud's leftover P2 (`birefnet.rs:102`, axis product not bounded) is only reachable from a library caller that skips `JobRequest::validate`, so it went to BH-02 instead of a third round. The merge waits on Erik's reply. MG-11 is unblocked once it merges.
 - **PC-11 prompt written:** `agents/prompts/local-pc-11.md`. Step 0 finds the per-layer storage first, and the task stops for Erik if it needs a document-format change outside our files.
-- **No nightly FreeBSD run on `main` yet.** UP-02 (PR #29) has a FreeBSD run in progress on its head.
+- UP-02 (PR #29) has a FreeBSD run in progress on its head.
+
+## 2026-10-17 (night): Claude - upstream v0.10.0 checked against our work
+
+- **Upstream released v0.10.0** (`8407d9c`). Most of it (v0.9.0 to `2a952f1`) is already in the fork through SY-02; 65 commits are new. No upstream AI, ONNX or model work overlaps ours. Upstream's own Select Subject and Content-Aware Fill improvements are already in the fork.
+- **BF-04 (new, security):** upstream now refuses a group/world-readable control-token file (#5459). Our client reads `endpoint.json` without that check, so it gets the same rule. Prompt `agents/prompts/local-bf-04.md`.
+- **SY-03 (new):** sync to the **v0.10.0 tag** after UP-02 merges (UP-02 was cut from this same commit). Trial merge: two conflicts, `apps/photocraft/src/main.rs` (our `with_ai` spots) and `docs/scorecard.md`. Prompt `agents/prompts/local-sy-03.md`.
+- **MG-11 note:** PhotoCraft has its own GPU Memory preference, so CAIM's CUDA memory check must use free VRAM.
+- **Nightly FreeBSD hasn't run on the fork yet** (0 scheduled runs): GitHub turns scheduled workflows off on forks until they are enabled in the Actions tab. Claude sent the API "enable" call; the 02:17 UTC run on Oct 19 will show whether it took. Until then the per-PR FreeBSD dispatch (amendment 21) still covers every NEEDED merge.
+- Upstream's face detection (#4513, a small CNN in pure Rust, in-process) is noted as prior art only: no task.
 
 ## 2026-10-17 (night): Claude - PC-08 merged
 
