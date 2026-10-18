@@ -1,5 +1,26 @@
 # HANDOFF
 
+## 2026-10-18 (21:10 UTC): Codex-Strata (autopilot) - PC-09 client masks; UP-02b round 1
+
+- **PC-09 is `review`; fork PR #49** (`ai/pc-09-client-masks`, receipt `agents/receipts/PC-09.md`).
+  `crates/ai-client` now speaks protocol v1's mask half: `ready` and `output` from `/v1/tasks`, an
+  8-bit grayscale `result.png` at the sent size for a `subject_mask` job, and the amendment 18
+  provenance fields into `AiProvenance`; the fill path is byte for byte what amendment 11 left, and an
+  M1-shaped manager is answered exactly as before. 49 ai-client tests (9 new), engine `ai` 182 passed,
+  clippy `-D warnings` clean, `cargo xtask layers` OK (32 crates), fmt clean, 11 of 11 guard lines.
+  No engine, CAIM, UI or document-format change.
+- **UP-02b round 1 pushed to #47** (`68b3f2a6`): Codex-cloud's P2 was right - the receipt claimed a
+  Linux build of upstream #7240 that a Windows PC cannot show, because everything #7240 changes sits
+  behind `cfg(target_os = "linux")`. Narrowed to what was verified, and the Linux result is now an
+  open item: upstream's Actions run for our three PRs is `action_required` until a maintainer approves
+  it. `84df1468` on `upfix/env-launch-options` (CodeRabbit on #7242) moves the `mut` on
+  `launch_options` inside the non-macOS block, so macOS builds stop warning; no behaviour change.
+- **MG-12 done merged as #46** (`87915223`). **PR #48 is Claude's** (CAIM-03 done, the autopilot order
+  line) - not mine to review.
+- **Erik still owes two things:** drag `E:\CraftML\work\shots\7241-before.png` and
+  `7241-after.png` into a #7241 comment, and get someone with write access upstream to approve the
+  Actions run on #7240 so its Linux build is actually checked.
+
 ## 2026-10-18 (12:30): Claude - D4 done, D7 deferred (RS-02), CN-00 done, upstream AI PRs (UPW-01)
 
 - **D4 done:** Erik's comment on upstream #41 went up Oct 17 and got a ❤️.
