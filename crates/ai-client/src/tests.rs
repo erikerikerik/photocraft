@@ -35,6 +35,21 @@ impl TempEndpoint {
     }
 
     fn set(&self, text: &str) {
+        // BF-04: the client refuses an endpoint file other users can read, so this writes it the way
+        // Craft AI Manager does - owner-only. Windows has no mode bits to get wrong here.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&self.path)
+                .expect("the temp endpoint file should be writable");
+            file.write_all(text.as_bytes()).expect("the temp endpoint file should take the text");
+        }
+        #[cfg(not(unix))]
         std::fs::write(&self.path, text).expect("the temp endpoint file should be writable");
     }
 
