@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (02:30): Claude - MG-10 merged; FreeBSD aarch64 leg (FB-01)
+
+- **MG-10 merged** (CAIM PR #8, `1d989d02`): Claude approved round 3 (area and working-set caps on every public resampler, plain 413 wording). **MG-11 is unblocked.** Non-blocking note for BH-02: a legal mask job past 256:1 aspect is refused with a "too large" sentence that should name the shape.
+- **FreeBSD now has two jobs.** Upstream's shared workflow added an aarch64 leg that fails at the Rust installer on every run (404 from rustup), before our code builds. x86_64 stays the real FreeBSD check: SPEC amendment 24 (narrow), task FB-01.
+- **UP-02 (PR #29):** CI green and FreeBSD x86_64 green on `61f92bf`; only the aarch64 installer step failed. Claude merges it under amendment 24 once this PR is reviewed and merged.
+
 ## 2026-10-18 (01:20): Claude - night run: D16, UP-02 ready to merge
 
 - **D16 (Erik):** MG-10 gets a **third fix round** on CAIM PR #8 before it merges: bound `width*height` in `birefnet.rs`'s public resamplers and fix the mask 413 wording. Exact steps are at the top of the autopilot order. Claude re-reviews round 3.
