@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (early): Claude (check-in) - MG-10 reviewed, PC-11 prompt
+
+- **MG-10 (CAIM PR #8, parked):** Claude's independent review of `d60ff1a` is **APPROVE**, and CI is green. Codex-cloud's leftover P2 (`birefnet.rs:102`, axis product not bounded) is only reachable from a library caller that skips `JobRequest::validate`, so it went to BH-02 instead of a third round. The merge waits on Erik's reply. MG-11 is unblocked once it merges.
+- **PC-11 prompt written:** `agents/prompts/local-pc-11.md`. Step 0 finds the per-layer storage first, and the task stops for Erik if it needs a document-format change outside our files.
+- **No nightly FreeBSD run on `main` yet.** UP-02 (PR #29) has a FreeBSD run in progress on its head.
+
 ## 2026-10-17 (night): Claude - PC-08 merged
 
 - **PC-08 merged** as `8ae4263` (PR #24). Code unchanged since Claude's approval of `dbca73af`; the head only gained merges of `main`. Every check green on `20f0790`, FreeBSD included.
