@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (11:45): Claude - our upstream PRs vs today's upstream main
+
+- Upstream has **not** fixed any of UP-02's three bugs on its own: `portal_save.rs`, `export_dialog.rs` and `single_instance.rs` are unchanged since v0.10.0. #7240, #7241 and #7242 are still open and merge with no textual conflict.
+- **#7242 would not compile on today's upstream main.** Upstream's #6499 made `launch_options` immutable. New task **UP-02b** (prompt `agents/prompts/local-up-02b.md`) merges upstream main into the branch and adds `mut`. It is queued right after MG-12 round 4.
+- Upstream CI has not run on our three PRs: a fork contributor's first PR needs a maintainer to approve the run. Claude drafted a short Discord note for Erik asking for that.
+
 ## 2026-10-18 (11:30): Claude - D17 decided; PC-09 back to local
 
 - **D17 (Erik):** MG-12 gets **round 4, option 1** on CAIM PR #7: keep the lock file linked (no unlink in `Drop` or before locking), plus a test that never sees two `Taken`. Claude reviews it, and it merges on approval and green CAIM CI. This unblocks MG-13 and PC-10.
