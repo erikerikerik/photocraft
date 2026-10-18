@@ -39,3 +39,5 @@ reopen or push to someone else's PR.
 
 **Stop and report** if the fix needs a design decision, if more than about 50 lines change, or if upstream's CI
 asks for a CLA or sign-off you cannot give.
+
+**Token note (CN-00, Oct 18):** the agents' GitHub token is fine-grained and cannot open PRs on storytold/photocraft. If `gh pr create --repo storytold/photocraft` is refused, push the `upfix/*` branch anyway, put the exact PR title and body in the receipt under "For Erik: open this upstream PR", and carry on. Erik clicks "Compare & pull request" on the pushed branch.

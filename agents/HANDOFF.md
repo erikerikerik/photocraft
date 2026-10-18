@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-18 (12:30): Claude - D4 done, D7 deferred (RS-02), CN-00 done, upstream AI PRs (UPW-01)
+
+- **D4 done:** Erik's comment on upstream #41 went up Oct 17 and got a ❤️.
+- **D7 deferred** to the "Ready for other people" stage. **RS-02** (new, research only) finds fill models whose training data is clean.
+- **CN-00 done (Erik):** agents now use a fine-grained token limited to the fork and CAIM. It can't open PRs on storytold/photocraft, so the UP-03/04/05 prompts stop with a ready title and body for Erik. Verify with `gh auth status` on CraftML.
+- **UPW-01 (watch):** upstream's open AI PRs #2878 and #6054 both register `edit.generativeFill` (our id), and #7007 adds `crates/ml` and edits `smartselect_cmds.rs`. Nothing is merged upstream yet. If one merges, the sync reconciles first, and Erik decides how we line up.
+
 ## 2026-10-18 (11:45): Claude - our upstream PRs vs today's upstream main
 
 - Upstream has **not** fixed any of UP-02's three bugs on its own: `portal_save.rs`, `export_dialog.rs` and `single_instance.rs` are unchanged since v0.10.0. #7240, #7241 and #7242 are still open and merge with no textual conflict.
