@@ -4674,7 +4674,7 @@ dependencies = [
 
 [[package]]
 name = "photocraft-ai-client"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "photocraft-color",
  "photocraft-compose",
