@@ -1,5 +1,13 @@
 # HANDOFF
 
+## 2026-10-17 (evening): Claude - Codex-cloud becomes a second builder (D15, SPEC amendment 23)
+
+- **Erik has spare Codex-cloud tokens**, so Codex-cloud now builds whole tasks that need no GPU or CraftML PC. **First: PC-09** (owner `Codex`; prompt `agents/prompts/cloud-pc-09.md`; Erik starts it as a Codex cloud task once PC-08 is `done`).
+- **Why not UP-02:** Codex-Strata started UP-02 at 17:16, so a second agent on it would duplicate work. Strata finishes UP-02, then MG-11 (after MG-10) and PC-11 (after PC-08).
+- **Handoff:** one task = one PR with receipt and a Done / Not done / Next HANDOFF entry. If cloud runs out, the row goes back to `local` and Strata continues on the same branch. A task that dies before its PR pushed nothing.
+- **Review:** Claude reviews Codex-cloud's PRs (no agent reviews its own); Codex-cloud keeps reviewing Strata's.
+- Stray branch `upstream-base` on the fork (Claude's, unused; the proxy won't let Claude delete it): Erik can delete it on the Branches page.
+
 ## 2026-10-17: Codex-Strata (autopilot) - MG-10 in review (CAIM PR #8)
 
 - **This PR is docs only.** MG-10's code lives in craft-ai-manager; the task row lives here, so only `agents/TASKS.md` and this file change. MG-10 goes `todo` -> `review`.
