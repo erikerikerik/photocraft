@@ -7,8 +7,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use photocraft_color::PixelFormat;
-use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiProvider, AiRequest, AiResult, AiTask};
-use photocraft_geom::Rect;
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvenance, AiProvider, AiRequest, AiResult, AiTask};
+use photocraft_geom::{Rect, Size};
 
 use crate::endpoint::{self, Endpoint};
 use crate::http;
@@ -25,6 +25,8 @@ const MAX_TRACKED_JOBS: usize = 16;
 struct JobRecord {
     endpoint: Endpoint,
     window: Rect,
+    /// The size actually sent, which for a mask task is smaller than the window (amendment 18).
+    size: Size,
     format: PixelFormat,
     samples: usize,
     sequence: u64,
@@ -125,7 +127,8 @@ impl AiProvider for CaimProvider {
     fn submit(&self, req: &AiRequest) -> Result<AiJobId, AiError> {
         req.validate()?;
         // The cheap checks first: a document the manager cannot handle fails without a file read.
-        let size = req.window.size();
+        // The size actually sent, not the window: a mask task downscales first (amendment 18).
+        let size = req.sent_image_size();
         let channels = pixels::channels(req.format)?;
         let depth = pixels::bit_depth(req.format);
         let job = protocol::job_json(req, depth, channels as u8)?;
@@ -149,7 +152,7 @@ impl AiProvider for CaimProvider {
         let reply = self.call(&endpoint, "POST", "/v1/jobs", Some(&content_type), &body, http::MAX_JSON_BODY_BYTES)?;
         let id = protocol::parse_job_id(&reply.body)?;
         let sequence = self.next_sequence.fetch_add(1, Ordering::Relaxed);
-        self.remember(&id, JobRecord { endpoint, window: req.window, format: req.format, samples: req.pixels.len(), sequence });
+        self.remember(&id, JobRecord { endpoint, window: req.window, size, format: req.format, samples: req.pixels.len(), sequence });
         Ok(AiJobId::new(id))
     }
 
@@ -163,7 +166,7 @@ impl AiProvider for CaimProvider {
     fn result(&self, id: &AiJobId) -> Result<AiResult, AiError> {
         let record = self.record(id)?;
         let base = protocol::job_path(id.as_str())?;
-        let size = record.window.size();
+        let size = record.size;
         let provenance = {
             let reply = self.get(&record.endpoint, &format!("{base}/result"), http::MAX_JSON_BODY_BYTES)?;
             protocol::parse_provenance(&reply.body)?
@@ -184,12 +187,14 @@ impl AiProvider for CaimProvider {
         }
         Ok(AiResult {
             window: record.window,
-            pixels,
-            format: record.format,
+            // Milestone 1 has one task, and its answer is an image. The mask path (amendment
+            // 18) arrives with PC-09, where result.png gains a mask reader.
+            output: AiOutput::Image { pixels, format: record.format },
             model: provenance.model,
             device: provenance.device,
             provider: provenance.provider,
             elapsed_ms: provenance.elapsed_ms,
+            provenance: AiProvenance::default(),
         })
     }
 

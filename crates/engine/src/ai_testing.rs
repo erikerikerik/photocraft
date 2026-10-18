@@ -45,11 +45,18 @@ pub(crate) struct FakeProvider {
     pub(crate) observe: Option<JobCtx>,
     /// What `max_pixels` answers: `Ok(None)` (not advertised) unless set.
     pub(crate) max_pixels: Option<Result<Option<u64>, AiError>>,
+    /// Offer `subject_mask` in `tasks()` and answer a mask request with `fake_mask`, so the AI
+    /// Select Subject and Remove Background tests have a provider that can do the job.
+    pub(crate) offer_mask: bool,
 }
 
 impl AiProvider for FakeProvider {
     fn tasks(&self) -> Result<Vec<AiTask>, AiError> {
-        Ok(vec![AiTask::FillMaskedArea])
+        let mut tasks = vec![AiTask::FillMaskedArea];
+        if self.offer_mask {
+            tasks.push(AiTask::SubjectMask);
+        }
+        Ok(tasks)
     }
     fn submit(&self, req: &AiRequest) -> Result<AiJobId, AiError> {
         if self.call_error == Some("submit") {
@@ -99,37 +106,64 @@ impl AiProvider for FakeProvider {
         assert_eq!(id.as_str(), "fake-job");
         let s = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         let req = s.request.as_ref().ok_or_else(|| AiError::Other("No job was submitted".into()))?;
-        let mut pixels = req.pixels.clone();
-        // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
-        // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
-        // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
-        for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
-            if *coverage > 0.0 {
-                for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
-                    *sample = 0.75;
-                }
-                // The sample after the colour channels, when the format has one.
-                if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
-                    *alpha = 1.0;
+        let output = if req.task == AiTask::SubjectMask {
+            // A soft-edged disc at the size the request actually sent (amendment 18), so a test can
+            // compare the upscaled selection against the same shape.
+            let size = req.sent_image_size();
+            let mut coverage = fake_mask(size);
+            if self.bad_pixel
+                && let Some(v) = coverage.first_mut()
+            {
+                *v = f32::NAN;
+            }
+            if self.wrong_size {
+                coverage.pop();
+            }
+            AiOutput::Mask { coverage, size }
+        } else {
+            let mut pixels = req.pixels.clone();
+            // Solid 0.75 in every colour channel at full strength wherever the mask is > 0 (amendment
+            // 16); the unselected pixels are the input as it came. Alpha has no fill to blend towards,
+            // so a covered pixel becomes opaque instead - Craft AI Manager's fake backend does the same.
+            for (pixel, coverage) in pixels.chunks_exact_mut(req.format.channels()).zip(&req.coverage) {
+                if *coverage > 0.0 {
+                    for sample in pixel.iter_mut().take(req.format.mode.color_channels()) {
+                        *sample = 0.75;
+                    }
+                    // The sample after the colour channels, when the format has one.
+                    if let Some(alpha) = pixel.get_mut(req.format.mode.color_channels()) {
+                        *alpha = 1.0;
+                    }
                 }
             }
-        }
-        if self.bad_pixel
-            && let Some(sample) = pixels.first_mut()
-        {
-            *sample = f32::NAN;
-        }
-        if self.wrong_size {
-            pixels.pop();
-        }
+            if self.bad_pixel
+                && let Some(sample) = pixels.first_mut()
+            {
+                *sample = f32::NAN;
+            }
+            if self.wrong_size {
+                pixels.pop();
+            }
+            AiOutput::Image { pixels, format: if self.wrong_format { PixelFormat::GRAY8 } else { req.format } }
+        };
         Ok(AiResult {
             window: if self.wrong_window { req.window.translate(1, 0) } else { req.window },
-            pixels,
-            format: if self.wrong_format { PixelFormat::GRAY8 } else { req.format },
+            output,
             model: "solid-fill".into(),
             device: "CPU".into(),
             provider: "local fake".into(),
             elapsed_ms: 12,
+            // Amendment 18's extra provenance, so the commands have something to pass through.
+            provenance: AiProvenance {
+                model_version: Some("epoch_244".into()),
+                model_sha256: Some("58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c".into()),
+                device_requested: Some("auto".into()),
+                device_name: Some("CPU".into()),
+                fallback_reason: None,
+                diagnostics: None,
+                load_ms: Some(5_124),
+                run_ms: Some(7_624),
+            },
         })
     }
     fn cancel(&self, id: &AiJobId) -> Result<(), AiError> {
@@ -140,8 +174,7 @@ impl AiProvider for FakeProvider {
         drop(s);
         if self.cancel_fails { Err(AiError::Other("Cancellation could not reach the provider".into())) } else { Ok(()) }
     }
-    fn max_pixels(&self, task: AiTask) -> Result<Option<u64>, AiError> {
-        assert_eq!(task, AiTask::FillMaskedArea);
+    fn max_pixels(&self, _task: AiTask) -> Result<Option<u64>, AiError> {
         self.state.lock().unwrap_or_else(PoisonError::into_inner).limit_asks += 1;
         self.max_pixels.clone().unwrap_or(Ok(None))
     }
@@ -151,10 +184,27 @@ pub(crate) fn request(format: PixelFormat) -> AiRequest {
     AiRequest {
         task: AiTask::FillMaskedArea,
         window: Rect::new(-2, 3, 1, 4),
+        sent_size: None,
         pixels: vec![0.25; 3 * format.channels()],
         format,
         coverage: vec![0.0, 0.5, 1.0],
         prompt: None,
         client_version: "photocraft/test".into(),
     }
+}
+
+/// The fake subject mask: a soft-edged disc centred on `size`, one value in 0..=1 per pixel. It is
+/// non-zero at the middle of every edge (so the selection's bounding box is the whole area) and
+/// zero in the corners.
+pub(crate) fn fake_mask(size: Size) -> Vec<f32> {
+    let (w, h) = (size.width.max(1) as f32, size.height.max(1) as f32);
+    let mut out = Vec::with_capacity(size.width as usize * size.height as usize);
+    for y in 0..size.height {
+        for x in 0..size.width {
+            let (u, v) = ((x as f32 + 0.5) / w - 0.5, (y as f32 + 0.5) / h - 0.5);
+            let r = (u * u + v * v).sqrt();
+            out.push(((0.6 - r) / 0.2).clamp(0.0, 1.0));
+        }
+    }
+    out
 }
