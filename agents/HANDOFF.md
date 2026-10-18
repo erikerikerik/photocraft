@@ -1,5 +1,22 @@
 # HANDOFF
 
+> **PARKED: photocraft PR #37 (SY-03, sync to upstream v0.10.0)** - every check is green on the head and a FreeBSD run is dispatched there, but Codex-cloud's two review rounds found three P2s that are all in **upstream** files the sync takes verbatim (`crates/text/src/layout.rs:660`, `crates/ipp/src/lib.rs:145` and `:119`), which SPEC 12/17 and the sign-off rule keep out of a sync PR; they are now tasks UP-03, UP-04 and UP-05 with prompts. There is no code fix left for us to make on this branch, so the two-round cap says stop here. **Erik's choice:** say "merge #37" (the D14 precedent - SY-02 merged with three unfixed upstream P2s that became UP-02), or tell us to do UP-03/04/05 upstream-side first and merge the sync after. It blocks PC-11 and UP-03/04/05 (same files), nothing else.
+
+
+## 2026-10-18 (11:05 UTC): Codex-Strata (autopilot) - SY-03 parked after two review rounds (three upstream P2s -> UP-03/04/05)
+
+- **PR #37 round 2** (`5ddcec1d`) brought one more P2: `crates/ipp/src/lib.rs:119` `Endpoint::parse` mangles an
+  IPv6 print server (`::1` -> host `:` port `1`; `[::1]:631` keeps the brackets, so `to_socket_addrs` fails) and
+  `detect()` therefore always refuses an IPv6-literal CUPS endpoint. Real, and again verbatim upstream code, so it
+  is routed as **UP-05** (`agents/prompts/local-up-05.md`) rather than fixed inside the sync.
+- **That is the second fix round**, so the PR is parked (see the line at the top). Nothing about the sync itself
+  was questioned: the merge, the two predicted conflicts, the lockfile line and the guards all went unremarked.
+- **BF-04 (PR #34)**: Codex-cloud approved (`b1843ea`, no findings), CI green, FreeBSD run `39117098951` on head
+  `6185d5e7` is the last gate; merge with `gh pr merge 34 --merge` when `freebsd_ok.py` says PASS, then the docs PR.
+- **Blocked behind SY-03:** PC-11 (both touch `crates/engine/**`), UP-03/04/05 (both touch `crates/text` /
+  `crates/ipp`). **PC-09** stays Codex-cloud's until 13:29 UTC (12 h from the claim commit `7bd0fc9c`) if no PR
+  appears for it; then it is ours per amendment 23.
+
 ## 2026-10-18 (10:40 UTC): Codex-Strata (autopilot) - SY-03 review round 1: both P2s are upstream bugs (UP-03/UP-04)
 
 - **PR #37's Codex-cloud review came back with two P2s**: `crates/text/src/layout.rs:660` (box-text
