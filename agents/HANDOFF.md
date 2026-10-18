@@ -1,5 +1,31 @@
 # HANDOFF
 
+## 2026-10-18 (03:20 UTC): Codex-Strata (autopilot) - BF-04 running CI; SY-03 in review (PR #37)
+
+- **BF-04 (PR #34) is unblocked and in its final CI.** `origin/main` merged into the branch as `6185d5e7`
+  (the only hand-written parts are the two `agents/` doc conflicts), Codex-cloud's round-2 review of
+  `b1843ea` came back with no findings, so the PR is ready, CI run `39117097553` and a FreeBSD run
+  `39117098951` are going on that head. Merge with `gh pr merge 34 --merge` once both are green
+  (`freebsd_ok.py 39117098951`), then the docs PR that sets BF-04 `done`.
+- **SY-03 in review: PR #37** (`sync/upstream-v0.10.0`, merge `2ac6e77f` + lockfile `11ad3b68`, receipt
+  `agents/receipts/SY-03.md`). The fork now sits on upstream's **release tag** `v0.10.0` (`8407d9cc`):
+  65 commits, 175 files, one new crate `crates/ipp` (32 crates in `cargo xtask layers`). Both conflicts
+  were the predicted ones and nothing outside our files needed a judgement call. All local gates green;
+  `needs_freebsd.py` says NEEDED, so the PR carries `needs-freebsd` and the FreeBSD dispatch waits for
+  the review.
+- **PC-11 is the next local task** (worktree `wt/pc-11`, nothing built). Its step 0 is done: the only
+  per-layer field that can carry the record is `Layer.psd_blocks` (`crates/doc/src/lib.rs:615`), which
+  the native `.pcraft` format already round-trips (`crates/format/src/convert.rs:204` and `:515`), so
+  there is no document-format change and no stop for Erik. It waits for SY-03 to merge: both touch
+  `crates/engine/**`.
+- **Local sandbox workaround** (no repo change): this session cannot write to `~/.cargo` and its
+  `sh.exe` cannot start, so cargo ran with `CARGO_HOME=E:\CraftML\work\.codex-tmp\cargo-home`,
+  `CARGO_NET_GIT_FETCH_WITH_CLI=true` and `http.sslBackend=openssl`, and pushes authenticate through a
+  `GIT_ASKPASS` helper that calls `gh auth git-credential`. The next agent needs the same.
+- **MG-11** is unblocked but has no `agents/prompts/local-mg-11.md`, so it is not pickable. **MG-12**
+  (CAIM PR #7) stays parked for Erik.
+
+
 ## 2026-10-18 (02:40): Claude - UP-02 merged, SY-03 ready
 
 - **UP-02 merged** as `066339f` (PR #29). Merged under SPEC 24: FreeBSD run 39110665751 has x86_64 green, and its aarch64 job failed only at the Rust installer (`freebsd_ok.py` PASS).
