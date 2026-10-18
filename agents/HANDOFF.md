@@ -31,8 +31,7 @@
   **not** `mut`, and the mutable binding is made inside the
   `#[cfg(not(target_os = "macos"))]` block that folds the env values. Do not put `mut` back on the
   destructured field - that is the warning `84df1468` removed.
-- **MG-12 round 4** (CAIM PR #7, head `ec931d3`) is pushed and all four CAIM checks are green; it now
-  waits on Claude's review, then `gh pr ready 7` and `gh pr merge 7 --merge`.
+- **MG-12 round 4** was approved by Claude and merged as CAIM `b4306981` (see the entry below). Nothing left to do there.
 - **Machine note:** the real cargo home is read-only to the sandbox and git https needs
   `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
   settings are in the UP-02 receipt's Oct 18 follow-up.
