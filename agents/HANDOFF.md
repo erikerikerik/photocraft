@@ -1,5 +1,28 @@
 # HANDOFF
 
+## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
+
+- **UP-02b done; fork docs PR #PRNUM** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
+  upstream storytold/photocraft#7242, now has `e2fb9ee8` (a clean `--no-ff` merge of `upstream/main`
+  `9185b64b`) and `a1c9743e`, which adds `mut` to the `launch_options` destructuring upstream #6499
+  made immutable - the smallest fix, and nothing else in our change moved. Gates on that tree:
+  `cargo test -p photocraft --bins --tests` 164 passed / 0 failed, clippy clean, `cargo xtask layers`
+  OK, `cargo fmt --check` clean. Pushed as a fast-forward, then one comment on #7242.
+- **#7240 and #7241 build on `9185b64b` as they stand** (local merges `8e90c608` and `38b183af`:
+  photocraft bin + integration tests green; ui-egui lib 3056 passed / 0 failed). Nothing was pushed
+  to either PR, and both worktree branches were reset back to their pushed heads.
+- **Erik, one drag and drop:** #7241 needs before/after screenshots (upstream `docs/contributing.md`).
+  They are `E:\CraftML\work\shots\7241-before.png` (Image Size opens at 40 x 30) and
+  `E:\CraftML\work\shots\7241-after.png` (10 x 6). The comment text is in the UP-02 receipt; the
+  GitHub API cannot attach images.
+- **SY-04 note:** when the next sync meets upstream #6499, `mut launch_options` has to survive in
+  `apps/photocraft/src/main.rs` or the fork stops compiling.
+- **MG-12 round 4** (CAIM PR #7, head `ec931d3`) is pushed and all four CAIM checks are green; it now
+  waits on Claude's review, then `gh pr ready 7` and `gh pr merge 7 --merge`.
+- **Machine note:** the real cargo home is read-only to the sandbox and git https needs
+  `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
+  settings are in the UP-02 receipt's Oct 18 follow-up.
+
 ## 2026-10-18 (12:30): Claude - D4 done, D7 deferred (RS-02), CN-00 done, upstream AI PRs (UPW-01)
 
 - **D4 done:** Erik's comment on upstream #41 went up Oct 17 and got a ❤️.
