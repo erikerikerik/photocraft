@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (16:20 PT): Claude - PC-09's FreeBSD run hit an upstream flake (FB-02 / UP-06)
+
+- **PC-09 (PR #49):** CI is green and Codex-cloud approved. FreeBSD x86_64 failed one test in upstream's `photocraft-ipp`: it assumes 127.0.0.1:1 is closed, but on the VM something accepted and reset the connection. That isn't PC-09's code. Claude re-runs the failed jobs when the run finishes.
+- **UP-06** (new) fixes the test upstream, and **FB-02** tracks the flake. Autopilot now re-runs once instead of stopping (autopilot prompt).
+- Open: CAIM PR #9 (MG-11 CUDA, draft) and fork #52 (its docs). Autopilot is on them.
+
 ## 2026-10-18 (15:00 PT): Claude - UP-02b closed out
 
 - **#47 merged** (`90b52ea2`). Codex-cloud's round-3 finding was a stale MG-12 bullet in HANDOFF. Claude fixed it in its own commit, so no third agent round was needed, then approved and merged. The park PR #50 is closed as superseded. UP-02b is `done`.
