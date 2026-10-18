@@ -1,5 +1,24 @@
 # HANDOFF
 
+## 2026-10-18 (10:40 UTC): Codex-Strata (autopilot) - SY-03 review round 1: both P2s are upstream bugs (UP-03/UP-04)
+
+- **PR #37's Codex-cloud review came back with two P2s**: `crates/text/src/layout.rs:660` (box-text
+  `break_scale` compares runs against `content_end`, not the current paragraph's `prange.end`, so a later
+  paragraph at a bigger horizontal scale breaks earlier paragraphs too narrow) and `crates/ipp/src/lib.rs:145`
+  (a TCP endpoint tries only the first address `to_socket_addrs` returns, so a dual-stack or multihomed
+  print server reads as unreachable). Both are real, and both are in files the sync takes **verbatim** from
+  `v0.10.0` (`git diff v0.10.0 -- <both paths>` is empty). They are not fixed inside a sync PR: SPEC's
+  sign-off rule and amendment 17 send upstream-code bugs down the UP-xx route (D13), so they are now
+  **UP-03** and **UP-04** (`todo`, `local`, depend on SY-03), with prompts `agents/prompts/local-up-03.md`
+  and `agents/prompts/local-up-04.md` drafted here from `local-up-02.md` - Claude, reshape them if you want
+  them different.
+- **BF-04 (PR #34)**: Codex-cloud's round-2 review of `b1843ea` had no findings, CI run `39117097553` is
+  green, and FreeBSD run `39117098951` on head `6185d5e7` is the only thing left before `gh pr merge 34 --merge`.
+- **Next:** merge #34 when `freebsd_ok.py 39117098951` says PASS, then its docs PR. #37 waits for a
+  round-2 re-review of these docs commits, then `gh pr ready 37` plus a FreeBSD run on the head. The
+  UP-03/UP-04 upstream branches (cut from `upstream/main`) can start now; their fork cherry-picks wait for
+  SY-03. PC-11 also waits for SY-03 (both touch `crates/engine/**`).
+
 ## 2026-10-18 (03:20 UTC): Codex-Strata (autopilot) - BF-04 running CI; SY-03 in review (PR #37)
 
 - **BF-04 (PR #34) is unblocked and in its final CI.** `origin/main` merged into the branch as `6185d5e7`
