@@ -13,6 +13,17 @@
 - **MG-12 (CAIM PR #7) is parked.** Codex's re-review of `4725568` found a **seventh** P2 in the launch lock (`crates/caim/src/endpoint.rs:532`: `Drop` unlinks the lock file, so a waiter can lock an unlinked inode while another run creates a new file at the same name). The fix rounds are spent (two under SPEC 15 plus D14), so nothing was fixed; the label and the three choices for Erik are at the top of CAIM's `agents/HANDOFF.md`. CI was green on `4725568`.
 - **MG-10 is merged**: CAIM PR #8, merge commit `1d989d0` (Erik merged it at 09:23Z, after Claude's round-3 APPROVE of `d60ff1a..20e38e4` and green CI). **MG-11 (CAIM CUDA) is unblocked.** Its `agents/TASKS.md` row still says `review`; a separate fork docs PR sets it to `done`.
 - **Queue:** SY-03 (sync to `8407d9cc` / v0.10.0) waits for UP-02, and UP-02 waits on the FreeBSD gate; **MG-11 (CAIM CUDA) and PC-11 are both ready now** - MG-11 first, per the Oct 18 order. PC-09 is still Codex-cloud's (claimed 2026-10-18T01:30Z via PR #28, no branch and no PR yet) - at 12 h amendment 23 lets `local` take it, which is ~13:30Z today.
+## 2026-10-18 (02:40): Claude - UP-02 merged, SY-03 ready
+
+- **UP-02 merged** as `066339f` (PR #29). Merged under SPEC 24: FreeBSD run 39110665751 has x86_64 green, and its aarch64 job failed only at the Rust installer (`freebsd_ok.py` PASS).
+- **SPEC 24 merged** (PR #35, Codex-cloud approved after one round). Autopilot steps 1 and 8 now judge FreeBSD with `agents/tools/freebsd_ok.py <run-id>`.
+- **Ready for autopilot:** SY-03 (sync to v0.10.0), BF-04, MG-11 (MG-10 merged), PC-11, after the MG-12 final round.
+
+## 2026-10-18 (02:30): Claude - MG-10 merged; FreeBSD aarch64 leg (FB-01)
+
+- **MG-10 merged** (CAIM PR #8, `1d989d02`): Claude approved round 3 (area and working-set caps on every public resampler, plain 413 wording). **MG-11 is unblocked.** Non-blocking note for BH-02: a legal mask job past 256:1 aspect is refused with a "too large" sentence that should name the shape.
+- **FreeBSD now has two jobs.** Upstream's shared workflow added an aarch64 leg that fails at the Rust installer on every run (404 from rustup), before our code builds. x86_64 stays the real FreeBSD check: SPEC amendment 24 (narrow), task FB-01.
+- **UP-02 (PR #29):** CI green and FreeBSD x86_64 green on `61f92bf`; only the aarch64 installer step failed. Claude merges it under amendment 24 once this PR is reviewed and merged.
 
 ## 2026-10-18 (01:20): Claude - night run: D16, UP-02 ready to merge
 
@@ -40,6 +51,20 @@
 
 - **PC-08 merged** as `8ae4263` (PR #24). Code unchanged since Claude's approval of `dbca73af`; the head only gained merges of `main`. Every check green on `20f0790`, FreeBSD included.
 - **Unblocked:** PC-09 (claimed by Codex-cloud; Erik starts it with `agents/prompts/cloud-pc-09.md`) and PC-11 (Codex-Strata).
+## 2026-10-17 (evening): Codex-Strata (autopilot) - UP-02 in review (fork PR #29; upstream #7240 / #7241 / #7242)
+
+- **UP-02 is in review.** Fork PR **#29** (`ai/up-02-upstream-fixes`, from `main` `ee0b21ba`) cherry-picks the three fixes; receipt `agents/receipts/UP-02.md`. Upstream: storytold/photocraft **#7240** (Linux Save As with one file type offered dropped the extension: `Swatches`, not `Swatches.aco`), **#7241** (Layer > Export As opened at the document size, not the layer trimmed size), **#7242** (a second launch that sets only `PHOTOCRAFT_*` overrides handed its files to the running instance and exited before any override was read).
+- **Cut the upstream way (amendment 7):** `upfix/portal-save-single-filter` `5c48fa98`, `upfix/layer-export-as-size` `a52f4587`, `upfix/env-launch-options` `a465fd2b` - one commit each on `upstream/main` `8407d9cc`, five upstream files only, no `agents/` file, no receipt, no AI crate, no token. Cherry-picked here as `7e7f464d`, `0be48a84`, `f16cb8bf` (+142 / -9).
+- **Credits, each @-mentioned once in its PR body:** `58f855a4` (#6151, @zuujiscom), `3ebc42a2` (#5344, @Zer0C00L01), `2a952f16` (#3755, @bommerts). All three were merged commits, not open PRs, so the prompt step-5 comment does not apply. No open upstream PR fixes any of the three; #6654 edits the same two files but is a different fix, and #7242's body says so.
+- **Gates on the fork branch:** `cargo test -p photocraft --bins --tests` 134 passed / 0 failed; `cargo test -p photocraft-ui-egui` 98 / 0; `cargo clippy -p photocraft --all-targets -- -D warnings` and the same for `photocraft-ui-egui` both clean; `cargo xtask layers` "OK: 31 crates, no layering violations"; `cargo fmt --check` clean; guards in the receipt.
+- **Said honestly rather than papered over:** bug 1 tests are Linux-only (`#[cfg(target_os = "linux")] mod portal_save`), so no red-then-green here; bug 3 test does not compile on the base (the reader is new) and its one-line `main.rs` wiring has no test on any platform; bug 2 before/after is real - without the fix the dialog reports 40x30 for a 10x6 layer.
+- **Upstream CI has not started** on #7240 / #7241 / #7242 ("no checks reported"): a maintainer has to approve the run for a first-time contributor from a fork. If they ask for a CLA or sign-off, that is UP-02 stop condition and it is Erik call.
+- **The fork nightly FreeBSD can never fire.** GitHub disables scheduled workflows on forks and `freebsd.yml` is `cron: 17 2 * * *` only, so `gh run list --workflow freebsd.yml --branch main --event schedule` has zero runs ever; the FreeBSD runs that exist are `workflow_dispatch`. SPEC 21 step 1 therefore has nothing to read, and no FB-xx can come from it. Fixing it means editing `.github/workflows/freebsd.yml`, an upstream file outside our own, so it is reported, not changed. Options are in the receipt.
+- **Review round 1 done:** Codex-cloud answered `COMMENTED` with one P2 on `single_instance.rs` (a stroke trace set to `off` or `false` is off upstream, so it should not keep a process of its own). Fixed in `a1494835` - each of the six variables is now off the way it is read where it takes effect - and a re-review of that commit only has been asked for. Bug 3 is now +99 / -1, over the prompt's "about 50 lines for one bug"; the reason and Erik's choice are in the receipt.
+- **Review round 2 done:** a second P2 from Codex-cloud - the menu rule trimmed but `main.rs:224` does not, so `PHOTOCRAFT_IN_WINDOW_MENUS=" 0 "` was read off here and on there. Fixed in `e7dc9063`; that is the second of the two rounds the autopilot allows, so a third finding parks #29 for Erik.
+- **Both review fixes are upstream too:** `upfix/env-launch-options` now ends at `d3d1506e` (two follow-up commits, no force-push), so #7242 and the cherry-pick carry the same bytes; the gates for that tree ran with the local `[patch]` applied and reverted.
+- **Next:** Codex-cloud re-review of #29, then CI. `needs_freebsd.py` will say NEEDED (cherry-picked upstream code), so a `workflow_dispatch` FreeBSD run must be green on the head before merging. Then MG-11 once MG-10 (CAIM PR #8) merges and PC-11 once PC-08 (fork PR #24, mergeable again) merges; PC-09 stays Codex-cloud (amendment 23).
+- This PR touches `agents/TASKS.md` and this file; MG-10 fork-side docs PR will too, so whichever merges second keeps both sides.
 
 ## 2026-10-17 (evening): Claude - Codex-cloud becomes a second builder (D15, SPEC amendment 23)
 
