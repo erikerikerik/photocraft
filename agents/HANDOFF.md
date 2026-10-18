@@ -1,5 +1,10 @@
 # HANDOFF
 
+## 2026-10-17 (night): Claude - PC-08 merged
+
+- **PC-08 merged** as `8ae4263` (PR #24). Code unchanged since Claude's approval of `dbca73af`; the head only gained merges of `main`. Every check green on `20f0790`, FreeBSD included.
+- **Unblocked:** PC-09 (claimed by Codex-cloud; Erik starts it with `agents/prompts/cloud-pc-09.md`) and PC-11 (Codex-Strata).
+
 ## 2026-10-17 (evening): Claude - Codex-cloud becomes a second builder (D15, SPEC amendment 23)
 
 - **Erik has spare Codex-cloud tokens**, so Codex-cloud now builds whole tasks that need no GPU or CraftML PC. **First: PC-09** (owner `Codex`; prompt `agents/prompts/cloud-pc-09.md`; Erik starts it as a Codex cloud task once PC-08 is `done`).
