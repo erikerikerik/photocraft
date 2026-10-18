@@ -22,13 +22,27 @@
   They are `E:\CraftML\work\shots\7241-before.png` (Image Size opens at 40 x 30) and
   `E:\CraftML\work\shots\7241-after.png` (10 x 6). The comment text is in the UP-02 receipt; the
   GitHub API cannot attach images.
-- **SY-04 note:** when the next sync meets upstream #6499, `mut launch_options` has to survive in
-  `apps/photocraft/src/main.rs` or the fork stops compiling.
+- **Round 2 on #47** (Codex-cloud, one P2 at `agents/receipts/UP-02.md:264`): the SY-04 guidance
+  below was stale the moment `84df1468` landed - it still told the next sync to keep
+  `mut launch_options` on the destructuring, which would undo that warning fix. Rewritten here and
+  in the receipt to preserve the block-local binding. Second and last review round on this PR.
+- **SY-04 note:** when the next sync meets upstream #6499, keep the shape `84df1468` gives
+  `apps/photocraft/src/main.rs`: the `launch_options` field of the `LaunchArgs` destructuring is
+  **not** `mut`, and the mutable binding is made inside the
+  `#[cfg(not(target_os = "macos"))]` block that folds the env values. Do not put `mut` back on the
+  destructured field - that is the warning `84df1468` removed.
 - **MG-12 round 4** (CAIM PR #7, head `ec931d3`) is pushed and all four CAIM checks are green; it now
   waits on Claude's review, then `gh pr ready 7` and `gh pr merge 7 --merge`.
 - **Machine note:** the real cargo home is read-only to the sandbox and git https needs
   `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
   settings are in the UP-02 receipt's Oct 18 follow-up.
+
+## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
+
+- **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.
+- **Unblocked:** MG-13 now waits only on UI-01 (Claude and Erik's design). PC-10 waits on PC-09.
+- **Nightly FreeBSD** 39106981351: PASS by `freebsd_ok.py` (aarch64 excused, FB-01).
+- **Autopilot order:** PC-09, MG-11, PC-11, UP-02b, UP-03/04/05.
 
 ## 2026-10-18 (12:30): Claude - D4 done, D7 deferred (RS-02), CN-00 done, upstream AI PRs (UPW-01)
 
