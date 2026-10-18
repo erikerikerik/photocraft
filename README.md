@@ -1,3 +1,89 @@
+# PhotoCraft + local AI
+
+**A development fork of [PhotoCraft](https://github.com/storytold/photocraft), bringing local AI tools into a native image editor.**
+
+The aim is simple: select an object, remove it, and keep editing without sending your photo to a cloud service.
+This fork connects PhotoCraft to [Craft AI Manager (CAIM)](https://github.com/erikerikerik/craft-ai-manager),
+a separate local service that manages models and runs inference. PhotoCraft stays a thin editor client;
+model weights and AI runtimes live in the manager.
+
+## Working today: local object removal
+
+**Edit > Generative Fill...** uses LaMa on the CPU to fill a selected area from its surroundings.
+Despite the menu name, the current model performs object removal / inpainting, not text-prompt image generation.
+
+- Select the object with PhotoCraft's selection tools, then start the fill.
+- Follow progress or cancel the job while the editor stays responsive.
+- Receive the result on a new **Generative Fill** layer; the original layer stays intact, and one undo removes the result.
+- After the model has been installed and acknowledged, inference works offline on your machine.
+
+Milestone 1 passed its hands-on check on Windows on October 16, 2026.
+See the [end-to-end receipt](agents/receipts/PC-06.md) for tests, limitations and CPU timings.
+
+<table>
+  <tr>
+    <th width="50%">Before</th>
+    <th width="50%">After local AI fill</th>
+  </tr>
+  <tr>
+    <td><img src="agents/receipts/pc-06/01-before.png" alt="PhotoCraft before AI fill: an orange buoy, its handle and reflection on blue water" width="100%"></td>
+    <td><img src="agents/receipts/pc-06/04-after.png" alt="PhotoCraft after LaMa fill: water replaces the buoy, with a Generative Fill layer above the original Background layer" width="100%"></td>
+  </tr>
+</table>
+
+*Real app captures from the same Milestone 1 test run. The result replaces the buoy, handle and reflection with water.*
+
+<details>
+<summary><strong>More screenshots: the tools in use</strong></summary>
+
+### Selection and fill commands
+
+![PhotoCraft with a lasso selection around the buoy and Edit menu showing Content-Aware Fill and Generative Fill](docs/images/local-ai/fill-menu-selection.png)
+
+A hands-on capture showing the selected object and both fill commands in the Edit menu.
+
+### Local model loading and progress
+
+![Generative Fill progress dialog reporting that Craft AI Manager is loading LaMa, with a progress bar and Cancel button](docs/images/local-ai/generative-fill-loading.png)
+
+The AI path reports the manager's progress and offers cancellation. This capture shows model loading, not a completed fill.
+
+### Content-Aware Fill, for comparison
+
+![PhotoCraft Content-Aware Fill preview replacing the selected buoy with water, beside sampling and adaptation controls](docs/images/local-ai/content-aware-fill-comparison.png)
+
+PhotoCraft also has a separate Content-Aware Fill tool. This is its preview, not the LaMa result shown above.
+The hands-on screenshots use a different selection from the automated before/after run.
+
+</details>
+
+Photo: W.carter, [Orange buoy in water.jpg](https://commons.wikimedia.org/wiki/File:Orange_buoy_in_water.jpg), CC0.
+[Screenshot sources and licences](docs/images/local-ai/SOURCE.md).
+
+## Try it / follow development
+
+This is an experimental, **Windows-first** integration. Build this fork using the
+[development guide](docs/development.md), and follow the manager's
+[setup and model-install instructions](https://github.com/erikerikerik/craft-ai-manager#running-it).
+Start CAIM with LaMa installed, open an image in PhotoCraft, make a selection, then choose **Edit > Generative Fill...**.
+The AI client communicates with the manager over authenticated loopback HTTP (`127.0.0.1`).
+
+CAIM is a separate project with a **PolyForm Noncommercial** licence; PhotoCraft retains its MIT / Apache-2.0 licences.
+LaMa's training-data licence caveat is recorded in the [model note](agents/models/lama.md#licence-note);
+this demo is not a claim of commercial-use clearance.
+
+**Next:** AI subject selection and background removal, followed by CUDA acceleration and a manager window.
+These are development goals, not features demonstrated by these screenshots.
+Follow the [task board](agents/TASKS.md) and [project specification](agents/SPEC.md) for their current status.
+
+## Built on upstream PhotoCraft
+
+The editor and its broad feature set come from [storytold/photocraft](https://github.com/storytold/photocraft)
+and its contributors. This fork keeps up with upstream through regular syncs while developing the local AI integration.
+The upstream project links, downloads and browser demo below describe upstream PhotoCraft; they do not include this fork's local AI setup.
+
+---
+
 <p align="center">
   <a href="https://getartcraft.com/">
     <picture>
@@ -84,7 +170,7 @@
 
 ## Features
 
-Every screenshot here is the real app at work on public-domain art, rendered offscreen through its control channel.
+The screenshots in this upstream feature tour show the real app at work on public-domain art, rendered offscreen through its control channel.
 
 <table>
   <tr>
