@@ -2,15 +2,22 @@
 
 ## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
 
-- **UP-02b done; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
+- **UP-02b is `review`; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
   upstream storytold/photocraft#7242, now has `e2fb9ee8` (a clean `--no-ff` merge of `upstream/main`
   `9185b64b`) and `a1c9743e`, which adds `mut` to the `launch_options` destructuring upstream #6499
   made immutable - the smallest fix, and nothing else in our change moved. Gates on that tree:
   `cargo test -p photocraft --bins --tests` 164 passed / 0 failed, clippy clean, `cargo xtask layers`
   OK, `cargo fmt --check` clean. Pushed as a fast-forward, then one comment on #7242.
-- **#7240 and #7241 build on `9185b64b` as they stand** (local merges `8e90c608` and `38b183af`:
-  photocraft bin + integration tests green; ui-egui lib 3056 passed / 0 failed). Nothing was pushed
-  to either PR, and both worktree branches were reset back to their pushed heads.
+- **#7240 and #7241 merge onto `9185b64b` with no conflicts** (local merges `8e90c608` and `38b183af`).
+  #7241's tests pass on the merged tree (ui-egui lib 3056 passed / 0 failed). #7240 changes only
+  Linux-gated code, so Windows cannot compile it: its Linux build is **not** verified, and upstream's
+  Actions run for our PRs is still `action_required` (a maintainer has to approve it). Nothing was
+  pushed to either PR, and both worktree branches were reset back to their pushed heads.
+- **Round 1 on #47** (Codex-cloud, one P2 at `agents/receipts/UP-02.md:211`): the receipt claimed more
+  than a Windows PC can show about #7240. Narrowed, as above. Also `84df1468` on
+  `upfix/env-launch-options` (CodeRabbit on #7242): the `mut` on `launch_options` moves inside the
+  non-macOS block, so macOS builds stop warning about an unused `mut`. No behaviour change, and
+  upstream CI has no macOS leg, so it is hygiene.
 - **Erik, one drag and drop:** #7241 needs before/after screenshots (upstream `docs/contributing.md`).
   They are `E:\CraftML\work\shots\7241-before.png` (Image Size opens at 40 x 30) and
   `E:\CraftML\work\shots\7241-after.png` (10 x 6). The comment text is in the UP-02 receipt; the
