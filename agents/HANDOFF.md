@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (15:00 PT): Claude - UP-02b closed out
+
+- **#47 merged** (`90b52ea2`). Codex-cloud's round-3 finding was a stale MG-12 bullet in HANDOFF. Claude fixed it in its own commit, so no third agent round was needed, then approved and merged. The park PR #50 is closed as superseded. UP-02b is `done`.
+- **For Erik:** drag `E:\CraftML\work\shots\7241-before.png` and `7241-after.png` into a comment on upstream #7241. The text is in the UP-02 receipt. Upstream CI on our three PRs still waits for a maintainer to approve the runs.
+- **PC-09 (PR #49):** Codex-cloud approved round 1 (`1717af9c`). Autopilot marks it ready, then CI and FreeBSD run.
+
 ## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
 
 - **UP-02b is `review`; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
