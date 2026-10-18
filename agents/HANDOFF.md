@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-18 (02:40): Claude - UP-02 merged, SY-03 ready
+
+- **UP-02 merged** as `066339f` (PR #29). Merged under SPEC 24: FreeBSD run 39110665751 has x86_64 green, and its aarch64 job failed only at the Rust installer (`freebsd_ok.py` PASS).
+- **SPEC 24 merged** (PR #35, Codex-cloud approved after one round). Autopilot steps 1 and 8 now judge FreeBSD with `agents/tools/freebsd_ok.py <run-id>`.
+- **Ready for autopilot:** SY-03 (sync to v0.10.0), BF-04, MG-11 (MG-10 merged), PC-11, after the MG-12 final round.
+
 ## 2026-10-18 (02:30): Claude - MG-10 merged; FreeBSD aarch64 leg (FB-01)
 
 - **MG-10 merged** (CAIM PR #8, `1d989d02`): Claude approved round 3 (area and working-set caps on every public resampler, plain 413 wording). **MG-11 is unblocked.** Non-blocking note for BH-02: a legal mask job past 256:1 aspect is refused with a "too large" sentence that should name the shape.
