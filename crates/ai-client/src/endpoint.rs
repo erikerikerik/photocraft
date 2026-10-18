@@ -162,72 +162,78 @@ pub fn endpoint_file_from_env() -> Option<PathBuf> {
     }
 }
 
-/// BF-04: the endpoint-file permissions rule. These tests are Unix-only because the mode bits they
-/// check are Unix; Linux CI and the FreeBSD run are their evidence. They live here rather than in
-/// `crate::tests` so they cannot collide with PC-09's edits to that file.
-#[cfg(all(test, unix))]
+/// BF-04: the endpoint-file permissions rule. The module is `#[cfg(test)]` and the tests inside it
+/// are `#[cfg(unix)]`, because the mode bits they check are Unix - Linux CI and the FreeBSD run are
+/// their evidence. They live here rather than in `crate::tests` so they cannot collide with PC-09's
+/// edits to that file. (The two `cfg` layers are not decoration: `clippy.toml`'s
+/// `allow-expect-in-tests` only reaches test code, and `#[cfg(all(test, unix))]` is not test code as
+/// far as clippy is concerned, so the helper's `expect` calls would fail CI's clippy.)
+#[cfg(test)]
 mod tests {
-    use super::{ENDPOINT_VERSION, load, read_file};
-    use photocraft_engine::ai::AiError;
-    use std::os::unix::fs::PermissionsExt;
+    #[cfg(unix)]
+    mod unix_perms {
+        use crate::endpoint::{ENDPOINT_VERSION, load, read_file};
+        use photocraft_engine::ai::AiError;
+        use std::os::unix::fs::PermissionsExt;
 
-    /// One endpoint file per test, deleted at the end, so these run in parallel with each other and
-    /// with `crate::tests`.
-    struct TempEndpoint {
-        path: std::path::PathBuf,
-    }
-
-    impl TempEndpoint {
-        fn new(who: &str) -> Self {
-            static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-            let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            let path = std::env::temp_dir().join(format!("photocraft-caim-perm-{}-{n}.json", std::process::id()));
-            std::fs::write(&path, format!(r#"{{"version": {ENDPOINT_VERSION}, "port": 45123, "token": "tok-{who}"}}"#))
-                .expect("an endpoint file can be written");
-            Self { path }
+        /// One endpoint file per test, deleted at the end, so these run in parallel with each other and
+        /// with `crate::tests`.
+        struct TempEndpoint {
+            path: std::path::PathBuf,
         }
 
-        fn set_mode(&self, mode: u32) {
-            std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(mode)).expect("the mode of a temp file can be set");
+        impl TempEndpoint {
+            fn new(who: &str) -> Self {
+                static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+                let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                let path = std::env::temp_dir().join(format!("photocraft-caim-perm-{}-{n}.json", std::process::id()));
+                std::fs::write(&path, format!(r#"{{"version": {ENDPOINT_VERSION}, "port": 45123, "token": "tok-{who}"}}"#))
+                    .expect("an endpoint file can be written");
+                Self { path }
+            }
+
+            fn set_mode(&self, mode: u32) {
+                std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(mode)).expect("the mode of a temp file can be set");
+            }
         }
-    }
 
-    impl Drop for TempEndpoint {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_file(&self.path);
+        impl Drop for TempEndpoint {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.path);
+            }
         }
-    }
 
-    #[test]
-    fn an_endpoint_file_other_users_can_read_is_refused() {
-        for mode in [0o644u32, 0o660] {
-            let endpoint = TempEndpoint::new("readable");
-            endpoint.set_mode(mode);
-            let error = load(&endpoint.path).expect_err(&format!("a file other users can read (mode {:o}) must not be used", mode));
-            let AiError::Other(sentence) = error else {
-                panic!("a file other users can read has to say why it is refused, not just 'no manager': {error}");
-            };
-            assert!(sentence.contains(&format!("mode {:o}", mode & 0o777)), "the sentence names the mode it found: {sentence}");
-            assert!(sentence.contains("other users"), "and says what is wrong with it: {sentence}");
-            assert!(sentence.contains("Restart Craft AI Manager"), "and says what to do about it: {sentence}");
+        #[test]
+        fn an_endpoint_file_other_users_can_read_is_refused() {
+            for mode in [0o644u32, 0o660] {
+                let endpoint = TempEndpoint::new("readable");
+                endpoint.set_mode(mode);
+                let error = load(&endpoint.path).expect_err(&format!("a file other users can read (mode {:o}) must not be used", mode));
+                let AiError::Other(sentence) = error else {
+                    panic!("a file other users can read has to say why it is refused, not just 'no manager': {error}");
+                };
+                assert!(sentence.contains(&format!("mode {:o}", mode & 0o777)), "the sentence names the mode it found: {sentence}");
+                assert!(sentence.contains("other users"), "and says what is wrong with it: {sentence}");
+                assert!(sentence.contains("Restart Craft AI Manager"), "and says what to do about it: {sentence}");
+            }
         }
-    }
 
-    #[test]
-    fn an_endpoint_file_only_its_owner_can_read_is_used() {
-        let endpoint = TempEndpoint::new("owner");
-        endpoint.set_mode(0o600);
-        let loaded = load(&endpoint.path).expect("a 0600 endpoint file is what Craft AI Manager writes");
-        assert_eq!(loaded.port(), 45123, "the port is read as usual");
-        assert_eq!(loaded.token, "tok-owner", "so is the token");
-    }
+        #[test]
+        fn an_endpoint_file_only_its_owner_can_read_is_used() {
+            let endpoint = TempEndpoint::new("owner");
+            endpoint.set_mode(0o600);
+            let loaded = load(&endpoint.path).expect("a 0600 endpoint file is what Craft AI Manager writes");
+            assert_eq!(loaded.port(), 45123, "the port is read as usual");
+            assert_eq!(loaded.token, "tok-owner", "so is the token");
+        }
 
-    #[test]
-    fn an_endpoint_file_that_is_not_a_regular_file_is_no_manager() {
-        let folder = std::env::temp_dir().join(format!("photocraft-caim-perm-dir-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&folder);
-        std::fs::create_dir_all(&folder).expect("a temp folder can be made");
-        assert_eq!(read_file(&folder), Err(AiError::NoProvider), "a folder where the endpoint file belongs is not a manager");
-        let _ = std::fs::remove_dir_all(&folder);
+        #[test]
+        fn an_endpoint_file_that_is_not_a_regular_file_is_no_manager() {
+            let folder = std::env::temp_dir().join(format!("photocraft-caim-perm-dir-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&folder);
+            std::fs::create_dir_all(&folder).expect("a temp folder can be made");
+            assert_eq!(read_file(&folder), Err(AiError::NoProvider), "a folder where the endpoint file belongs is not a manager");
+            let _ = std::fs::remove_dir_all(&folder);
+        }
     }
 }
