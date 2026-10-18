@@ -1,5 +1,22 @@
 # HANDOFF
 
+> **PARKED: photocraft PR #37 (SY-03, sync to upstream v0.10.0)** - every check is green on the head and a FreeBSD run is dispatched there, but Codex-cloud's two review rounds found three P2s that are all in **upstream** files the sync takes verbatim (`crates/text/src/layout.rs:660`, `crates/ipp/src/lib.rs:145` and `:119`), which SPEC 12/17 and the sign-off rule keep out of a sync PR; they are now tasks UP-03, UP-04 and UP-05 with prompts. There is no code fix left for us to make on this branch, so the two-round cap says stop here. **Erik's choice:** say "merge #37" (the D14 precedent - SY-02 merged with three unfixed upstream P2s that became UP-02), or tell us to do UP-03/04/05 upstream-side first and merge the sync after. It blocks PC-11 and UP-03/04/05 (same files), nothing else.
+
+
+## 2026-10-18 (11:05 UTC): Codex-Strata (autopilot) - SY-03 parked after two review rounds (three upstream P2s -> UP-03/04/05)
+
+- **PR #37 round 2** (`5ddcec1d`) brought one more P2: `crates/ipp/src/lib.rs:119` `Endpoint::parse` mangles an
+  IPv6 print server (`::1` -> host `:` port `1`; `[::1]:631` keeps the brackets, so `to_socket_addrs` fails) and
+  `detect()` therefore always refuses an IPv6-literal CUPS endpoint. Real, and again verbatim upstream code, so it
+  is routed as **UP-05** (`agents/prompts/local-up-05.md`) rather than fixed inside the sync.
+- **That is the second fix round**, so the PR is parked (see the line at the top). Nothing about the sync itself
+  was questioned: the merge, the two predicted conflicts, the lockfile line and the guards all went unremarked.
+- **BF-04 (PR #34)**: Codex-cloud approved (`b1843ea`, no findings), CI green, FreeBSD run `39117098951` on head
+  `6185d5e7` is the last gate; merge with `gh pr merge 34 --merge` when `freebsd_ok.py` says PASS, then the docs PR.
+- **Blocked behind SY-03:** PC-11 (both touch `crates/engine/**`), UP-03/04/05 (both touch `crates/text` /
+  `crates/ipp`). **PC-09** stays Codex-cloud's until 13:29 UTC (12 h from the claim commit `7bd0fc9c`) if no PR
+  appears for it; then it is ours per amendment 23.
+
 ## 2026-10-18 (11:00 UTC): Codex-Strata (autopilot) - BF-04 merged (`2d91f4dc`, PR #34)
 
 - **BF-04 is done.** PR #34 merged as a merge commit `2d91f4dc` on head `6185d5e7`: Codex-cloud's round-2 review of
@@ -17,6 +34,50 @@
   FreeBSD run `39120306219` is going on the head). PC-11 waits on SY-03. PC-09 stays Codex-cloud's until 13:29 UTC
   (12 h from claim commit `7bd0fc9c`) if it still has no PR; then it is ours under amendment 23.
 
+## 2026-10-18 (10:40 UTC): Codex-Strata (autopilot) - SY-03 review round 1: both P2s are upstream bugs (UP-03/UP-04)
+
+- **PR #37's Codex-cloud review came back with two P2s**: `crates/text/src/layout.rs:660` (box-text
+  `break_scale` compares runs against `content_end`, not the current paragraph's `prange.end`, so a later
+  paragraph at a bigger horizontal scale breaks earlier paragraphs too narrow) and `crates/ipp/src/lib.rs:145`
+  (a TCP endpoint tries only the first address `to_socket_addrs` returns, so a dual-stack or multihomed
+  print server reads as unreachable). Both are real, and both are in files the sync takes **verbatim** from
+  `v0.10.0` (`git diff v0.10.0 -- <both paths>` is empty). They are not fixed inside a sync PR: SPEC's
+  sign-off rule and amendment 17 send upstream-code bugs down the UP-xx route (D13), so they are now
+  **UP-03** and **UP-04** (`todo`, `local`, depend on SY-03), with prompts `agents/prompts/local-up-03.md`
+  and `agents/prompts/local-up-04.md` drafted here from `local-up-02.md` - Claude, reshape them if you want
+  them different.
+- **BF-04 (PR #34)**: Codex-cloud's round-2 review of `b1843ea` had no findings, CI run `39117097553` is
+  green, and FreeBSD run `39117098951` on head `6185d5e7` is the only thing left before `gh pr merge 34 --merge`.
+- **Next:** merge #34 when `freebsd_ok.py 39117098951` says PASS, then its docs PR. #37 waits for a
+  round-2 re-review of these docs commits, then `gh pr ready 37` plus a FreeBSD run on the head. The
+  UP-03/UP-04 upstream branches (cut from `upstream/main`) can start now; their fork cherry-picks wait for
+  SY-03. PC-11 also waits for SY-03 (both touch `crates/engine/**`).
+
+## 2026-10-18 (03:20 UTC): Codex-Strata (autopilot) - BF-04 running CI; SY-03 in review (PR #37)
+
+- **BF-04 (PR #34) is unblocked and in its final CI.** `origin/main` merged into the branch as `6185d5e7`
+  (the only hand-written parts are the two `agents/` doc conflicts), Codex-cloud's round-2 review of
+  `b1843ea` came back with no findings, so the PR is ready, CI run `39117097553` and a FreeBSD run
+  `39117098951` are going on that head. Merge with `gh pr merge 34 --merge` once both are green
+  (`freebsd_ok.py 39117098951`), then the docs PR that sets BF-04 `done`.
+- **SY-03 in review: PR #37** (`sync/upstream-v0.10.0`, merge `2ac6e77f` + lockfile `11ad3b68`, receipt
+  `agents/receipts/SY-03.md`). The fork now sits on upstream's **release tag** `v0.10.0` (`8407d9cc`):
+  65 commits, 175 files, one new crate `crates/ipp` (32 crates in `cargo xtask layers`). Both conflicts
+  were the predicted ones and nothing outside our files needed a judgement call. All local gates green;
+  `needs_freebsd.py` says NEEDED, so the PR carries `needs-freebsd` and the FreeBSD dispatch waits for
+  the review.
+- **PC-11 is the next local task** (worktree `wt/pc-11`, nothing built). Its step 0 is done: the only
+  per-layer field that can carry the record is `Layer.psd_blocks` (`crates/doc/src/lib.rs:615`), which
+  the native `.pcraft` format already round-trips (`crates/format/src/convert.rs:204` and `:515`), so
+  there is no document-format change and no stop for Erik. It waits for SY-03 to merge: both touch
+  `crates/engine/**`.
+- **Local sandbox workaround** (no repo change): this session cannot write to `~/.cargo` and its
+  `sh.exe` cannot start, so cargo ran with `CARGO_HOME=E:\CraftML\work\.codex-tmp\cargo-home`,
+  `CARGO_NET_GIT_FETCH_WITH_CLI=true` and `http.sslBackend=openssl`, and pushes authenticate through a
+  `GIT_ASKPASS` helper that calls `gh auth git-credential`. The next agent needs the same.
+- **MG-11** is unblocked but has no `agents/prompts/local-mg-11.md`, so it is not pickable. **MG-12**
+  (CAIM PR #7) stays parked for Erik.
+
 ## 2026-10-18 (03:05): Codex-Strata (autopilot) - BF-04 review round 2: a fifo is refused before it is opened (PR #34)
 
 - **Codex-cloud reviewed BF-04 PR #34 and left one P2** (`crates/ai-client/src/endpoint.rs:101`): `File::open` on a **fifo with no writer** blocks until a writer appears, so the `is_file()` check added in round 1 could never run and the AI job worker would sit in the open forever. Our bug, fixed in the round-2 commit: `read_file` now stats the path (`std::fs::metadata`, which opens nothing) and returns `NoProvider` unless it is a regular file **before** `File::open`; the handle check stays, because that is what makes the mode and size checks describe the bytes actually read. Symlink behaviour is unchanged (stat follows). New regression test `an_endpoint_fifo_with_no_writer_is_refused_without_opening_it` makes a real fifo with no peer and fails after five seconds if `read_file` does not answer, so a regression is a red test rather than a hung job; it is not `#[cfg(unix)]` (Windows compiles it and prints a skip line: no `mkfifo`), because `unsafe_code = "forbid"` rules out an FFI `mkfifo`. Local: fmt 0, clippy 0, `cargo test -p photocraft-ai-client` 40 / 0 / 0. **Fix rounds are now spent (2/2)** - the re-review of this commit is the last one; if it comes back with findings, the PR is parked.
@@ -30,6 +91,7 @@
 - **MG-12 (CAIM PR #7) is parked.** Codex's re-review of `4725568` found a **seventh** P2 in the launch lock (`crates/caim/src/endpoint.rs:532`: `Drop` unlinks the lock file, so a waiter can lock an unlinked inode while another run creates a new file at the same name). The fix rounds are spent (two under SPEC 15 plus D14), so nothing was fixed; the label and the three choices for Erik are at the top of CAIM's `agents/HANDOFF.md`. CI was green on `4725568`.
 - **MG-10 is merged**: CAIM PR #8, merge commit `1d989d0` (Erik merged it at 09:23Z, after Claude's round-3 APPROVE of `d60ff1a..20e38e4` and green CI). **MG-11 (CAIM CUDA) is unblocked.** Its `agents/TASKS.md` row still says `review`; a separate fork docs PR sets it to `done`.
 - **Queue:** SY-03 (sync to `8407d9cc` / v0.10.0) waits for UP-02, and UP-02 waits on the FreeBSD gate; **MG-11 (CAIM CUDA) and PC-11 are both ready now** - MG-11 first, per the Oct 18 order. PC-09 is still Codex-cloud's (claimed 2026-10-18T01:30Z via PR #28, no branch and no PR yet) - at 12 h amendment 23 lets `local` take it, which is ~13:30Z today.
+
 ## 2026-10-18 (02:40): Claude - UP-02 merged, SY-03 ready
 
 - **UP-02 merged** as `066339f` (PR #29). Merged under SPEC 24: FreeBSD run 39110665751 has x86_64 green, and its aarch64 job failed only at the Rust installer (`freebsd_ok.py` PASS).
