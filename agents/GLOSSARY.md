@@ -54,7 +54,8 @@ Updated by Claude, Oct 17, 2026. When a new prefix or abbreviation appears, add 
 | Name | Means |
 |---|---|
 | Codex-Strata | The local agent on the CraftML PC (Codex using the Strata model) |
-| Codex-cloud | OpenAI's hosted Codex, used as the independent reviewer |
+| Codex-cloud | OpenAI's hosted Codex: the independent reviewer of Codex-Strata's PRs, and since Oct 17 a second builder for tasks owned `Codex` (amendment 23) |
+| Claim | A task row whose owner is `Codex`: Codex-cloud is building it, so autopilot skips it |
 | Strata | The local language model running on the 4090 |
 | CraftML | The Windows account and PC the agents work in |
 | Autopilot | Codex-Strata's loop: task, PR, review, CI, merge (amendment 17) |
