@@ -86,7 +86,7 @@ Every UI row also passes U10.
 |---|---|---|---|---|---|---|---|---|
 | [x] | CAIM-01 | Loopback server with a token, `endpoint.json`, job API | M1 | M | local | | done (MG-01) | CAIM `agents/receipts/MG-01.md` |
 | [ ] | CAIM-02 | Model list: name, task, size, licence, installed or not, download / delete (the CAIM window, MG-13) | M2 | M | | CAIM-01 | todo | |
-| [ ] | CAIM-03 | Downloads with progress, SHA-256 check and resume (M1: basic download and check) | M1 / M2 | M | local | | M1 part done (MG-02); restart-safe resume is M2 (MG-12, amendment 18) | CAIM `agents/receipts/MG-02.md` |
+| [x] | CAIM-03 | Downloads with progress, SHA-256 check and resume (M1: basic download and check) | M1 / M2 | M | local | | done (MG-02: download, progress, SHA-256; MG-12: restart-safe resume, `app.json`, `activity.jsonl` - CAIM PR #7, merged as CAIM `b4306981`). The window that shows the progress is MG-13 | CAIM `agents/receipts/MG-02.md`, CAIM `agents/receipts/MG-12.md` |
 | [ ] | CAIM-04 | Device setting per task (Auto / CUDA / CPU); shows the GPU and free VRAM | M2 | M | | CAIM-02 | todo | |
 | [ ] | CAIM-05 | Disk usage and model folder location | M2 | S | | CAIM-02 | todo | |
 | [ ] | CAIM-06 | Update check for the catalog and the app | S2 | S | | CAIM-02 | todo | |
