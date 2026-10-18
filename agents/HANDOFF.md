@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
+
+- **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.
+- **Unblocked:** MG-13 now waits only on UI-01 (Claude and Erik's design). PC-10 waits on PC-09.
+- **Nightly FreeBSD** 39106981351: PASS by `freebsd_ok.py` (aarch64 excused, FB-01).
+- **Autopilot order:** PC-09, MG-11, PC-11, UP-02b, UP-03/04/05.
+
 ## 2026-10-18 (12:30): Claude - D4 done, D7 deferred (RS-02), CN-00 done, upstream AI PRs (UPW-01)
 
 - **D4 done:** Erik's comment on upstream #41 went up Oct 17 and got a ❤️.
