@@ -64,7 +64,8 @@ struct EndpointFile {
 ///
 /// What is opened is checked, not just its name (BF-04, mirroring upstream #5459): the file holds
 /// the manager's token, so anything other than a regular file the owner alone can read is refused
-/// before a byte of it is sent anywhere.
+/// before a byte of it is sent anywhere. The name is stat'd first, so a special file is refused
+/// without opening it - opening a fifo would block - and the opened handle is checked again.
 pub fn load(path: &Path) -> Result<Endpoint, AiError> {
     let text = read_file(path)?;
     let Ok(parsed) = serde_json::from_str::<EndpointFile>(&text) else {
@@ -90,13 +91,21 @@ pub fn load(path: &Path) -> Result<Endpoint, AiError> {
 }
 
 fn read_file(path: &Path) -> Result<String, AiError> {
+    // BF-04 (review round 2): judge the name before opening it. Opening a fifo with no writer
+    // blocks until a writer appears, so a check that runs after `File::open` can never run at all:
+    // the AI job worker would sit in the open. `metadata` is a stat - it opens nothing - so a fifo,
+    // a socket, a device or a folder is refused here instead. It follows a symlink to a regular
+    // file, which is what the handle check below has always accepted.
+    if !std::fs::metadata(path).is_ok_and(|stat| stat.is_file()) {
+        return Err(AiError::NoProvider);
+    }
     let mut file = File::open(path).map_err(|_| AiError::NoProvider)?;
     let Ok(meta) = file.metadata() else {
         return Err(AiError::NoProvider);
     };
-    // BF-04: a symlink to something else, a folder, a fifo or a device where the manager's file
-    // belongs is not the manager's file. Checked on the open handle, so nothing can be swapped in
-    // between the check and the read.
+    // BF-04: a folder or a device where the manager's file belongs is not the manager's file.
+    // Still checked on the open handle as well, so the size and mode checks below describe the
+    // bytes we actually read.
     if !meta.is_file() {
         return Err(AiError::NoProvider);
     }
@@ -170,6 +179,41 @@ pub fn endpoint_file_from_env() -> Option<PathBuf> {
 /// far as clippy is concerned, so the helper's `expect` calls would fail CI's clippy.)
 #[cfg(test)]
 mod tests {
+    use crate::endpoint::read_file;
+    use photocraft_engine::ai::AiError;
+
+    /// BF-04 (review round 2): a fifo with no writer is refused without opening it, because
+    /// `File::open` on one blocks until a writer appears. `std` has no mkfifo and the workspace
+    /// forbids `unsafe`, so the test asks the platform for the fifo and says so when it has none
+    /// (Windows). The read runs on its own thread: if the pre-check ever regresses, the test fails
+    /// in five seconds instead of hanging the CI job.
+    #[test]
+    fn an_endpoint_fifo_with_no_writer_is_refused_without_opening_it() {
+        static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("photocraft-caim-perm-fifo-{}-{n}", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let made = std::process::Command::new("mkfifo").arg(&path).status();
+        match made {
+            Ok(status) if status.success() => {}
+            unavailable => {
+                eprintln!("skipping: this platform has no mkfifo: {unavailable:?}");
+                return;
+            }
+        }
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let fifo = path.clone();
+        std::thread::spawn(move || {
+            let _ = sender.send(read_file(&fifo));
+        });
+        let answer = receiver.recv_timeout(std::time::Duration::from_secs(5));
+        let _ = std::fs::remove_file(&path);
+        match answer {
+            Ok(result) => assert_eq!(result, Err(AiError::NoProvider), "a fifo with no writer is 'no manager', and it is refused before anything is opened"),
+            Err(timed_out) => panic!("read_file never answered within five seconds ({timed_out:?}): it opened the fifo instead of refusing it"),
+        }
+    }
+
     #[cfg(unix)]
     mod unix_perms {
         use crate::endpoint::{ENDPOINT_VERSION, load, read_file};
