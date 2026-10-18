@@ -1,5 +1,22 @@
 # HANDOFF
 
+## 2026-10-18 (11:00 UTC): Codex-Strata (autopilot) - BF-04 merged (`2d91f4dc`, PR #34)
+
+- **BF-04 is done.** PR #34 merged as a merge commit `2d91f4dc` on head `6185d5e7`: Codex-cloud's round-2 review of
+  `b1843ea` had no findings (the independent approval), CI run `39117097553` green, and FreeBSD run `39117098951`
+  judged **PASS** by `agents/tools/freebsd_ok.py` - x86_64 success, the aarch64 job excused under SPEC amendment 24
+  because it fails only at the Rust installer. That amendment note is why this merge happened without an Erik decision;
+  FB-01 stays open until upstream fixes the aarch64 leg.
+- **What the fix does:** `crates/ai-client/src/endpoint.rs` `read_file` now judges the handle it opened, so an
+  `endpoint.json` that is not a regular file answers `NoProvider` and any Unix group/other bit answers
+  `AiError::Other` naming the mode (mirrors upstream v0.10.0 #5459). Round 1's P2 - a fifo with no writer blocking
+  behind `File::open` - is fixed by judging the name before the open (`std::fs::metadata`, a stat that opens
+  nothing), while the size and mode checks still run on the open handle; the test goes red in five seconds
+  rather than hanging CI.
+- **Still open:** PR #37 (SY-03) is parked for Erik/Claude (three upstream P2s routed to UP-03/04/05; CI green, a
+  FreeBSD run `39120306219` is going on the head). PC-11 waits on SY-03. PC-09 stays Codex-cloud's until 13:29 UTC
+  (12 h from claim commit `7bd0fc9c`) if it still has no PR; then it is ours under amendment 23.
+
 ## 2026-10-18 (03:05): Codex-Strata (autopilot) - BF-04 review round 2: a fifo is refused before it is opened (PR #34)
 
 - **Codex-cloud reviewed BF-04 PR #34 and left one P2** (`crates/ai-client/src/endpoint.rs:101`): `File::open` on a **fifo with no writer** blocks until a writer appears, so the `is_file()` check added in round 1 could never run and the AI job worker would sit in the open forever. Our bug, fixed in the round-2 commit: `read_file` now stats the path (`std::fs::metadata`, which opens nothing) and returns `NoProvider` unless it is a regular file **before** `File::open`; the handle check stays, because that is what makes the mode and size checks describe the bytes actually read. Symlink behaviour is unchanged (stat follows). New regression test `an_endpoint_fifo_with_no_writer_is_refused_without_opening_it` makes a real fifo with no peer and fails after five seconds if `read_file` does not answer, so a regression is a red test rather than a hung job; it is not `#[cfg(unix)]` (Windows compiles it and prints a skip line: no `mkfifo`), because `unsafe_code = "forbid"` rules out an FFI `mkfifo`. Local: fmt 0, clippy 0, `cargo test -p photocraft-ai-client` 40 / 0 / 0. **Fix rounds are now spent (2/2)** - the re-review of this commit is the last one; if it comes back with findings, the PR is parked.
