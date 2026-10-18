@@ -2,7 +2,7 @@
 
 ## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
 
-- **UP-02b done; fork docs PR #PRNUM** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
+- **UP-02b done; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
   upstream storytold/photocraft#7242, now has `e2fb9ee8` (a clean `--no-ff` merge of `upstream/main`
   `9185b64b`) and `a1c9743e`, which adds `mut` to the `launch_options` destructuring upstream #6499
   made immutable - the smallest fix, and nothing else in our change moved. Gates on that tree:
