@@ -22,10 +22,10 @@ The source of truth for what PhotoCraft AI does, how it behaves and how it looks
 | [x] | AI-C01 | Fill a selection with no prompt (remove an object): LaMa on the CPU | Edit › Generative Fill, empty prompt | M1 | L | local | | done (PC-06) | |
 | [ ] | AI-C02 | Remove tool "Generative AI" mode: brush over lines, wires, blemishes and the AI fills them. Today's Remove tool is classical (scorecard TOOL-213-19 lists AI mode as missing). | Remove tool › Generative AI | S1.5 | M | | AI-C01 | todo | |
 | [ ] | AI-C03 | Select Subject with an ML model (BiRefNet, task `subject_mask`), offered next to the classical one: `select.subject` `"method": "ai"` (amendment 18, D9) | Select › Subject (Device / Cloud) | M2 | M | local | RS-01, PC-08, PC-09, MG-10 | todo | |
-| [ ] | AI-C04 | Select Object by click or box (SAM 2.1; MobileSAM dropped). Not in M2 (D9) | Object Selection tool | Later | M | | AI-C03, a cleared SAM licence | todo | |
+| [ ] | AI-C04 | Select Object by click or box (SAM 2.1; MobileSAM dropped). Not in M2 (D9) | Object Selection tool | Later | M | | AI-C03, a cleared SAM licence | held (D19) | |
 | [ ] | AI-C05 | Remove Background with an ML matte, as a layer mask: `layer.removeBackground` `"method": "ai"`, same `subject_mask` task as AI-C03 (D9). Today's classical method stays the default. | Quick Action › Remove Background | M2 | S | local | AI-C03 | todo | |
 | [ ] | AI-C06 | Select Sky with an ML model | Select › Sky | Later | S | | AI-C03 | todo | |
-| [ ] | AI-C07 | Generative Fill with a prompt, 3 variations (ComfyUI backend) | Generative Fill | S3 | L | | CAIM-07 | todo | |
+| [ ] | AI-C07 | Generative Fill with a prompt, 3 variations (ComfyUI backend) | Generative Fill | S3 | L | | CAIM-07 | held (D19) | |
 | [ ] | AI-C08 | Generative Expand: crop past the canvas, fill the new area | Crop › Generative Expand | S3 | L | | AI-C07 | todo | |
 | [ ] | AI-C09 | Upscale 2× / 4× (Real-ESRGAN) | Generative Upscale, Super Zoom | Later | M | | CAIM-02 | todo | |
 | [ ] | AI-C10 | AI denoise | Camera Raw › Denoise | Later | M | | CAIM-02 | todo | |
@@ -90,7 +90,7 @@ Every UI row also passes U10.
 | [ ] | CAIM-04 | Device setting per task (Auto / CUDA / CPU); shows the GPU and free VRAM | M2 | M | | CAIM-02 | todo | |
 | [ ] | CAIM-05 | Disk usage and model folder location | M2 | S | | CAIM-02 | todo | |
 | [ ] | CAIM-06 | Update check for the catalog and the app | S2 | S | | CAIM-02 | todo | |
-| [ ] | CAIM-07 | ComfyUI connection: URL, Test button, reuse an existing model folder | S3 | M | | CAIM-02 | todo | |
+| [ ] | CAIM-07 | ComfyUI connection: URL, Test button, reuse an existing model folder | S3 | M | | CAIM-02 | held (D19) | |
 | [ ] | CAIM-08 | API keys in Windows Credential Manager / macOS Keychain | S4 | M | | CAIM-02 | todo | |
 | [ ] | CAIM-09 | Tray icon, optional start with Windows. M2 starts CAIM on demand instead (D5) | Later | S | | D5 | todo | |
 | [ ] | CAIM-10 | Activity log: recent jobs, where they ran, timings. M2: `activity.jsonl` (MG-12); the window shows the last job (MG-13) | M2 | S | local | CAIM-01 | todo | |
