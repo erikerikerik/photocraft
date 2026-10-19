@@ -3911,3 +3911,7 @@ curves	Smooth	Згладити
 	Replace	Замінити
 	{name} was changed by another app after it was opened or saved here.	Файл {name} змінила інша програма після того, як його тут відкрили або зберегли.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Замініть його цим документом або скасуйте й скористайтеся Файл › Зберегти як, щоб зберегти обидва.
+# Properties › Made with: the AI model that made or masked the layer (PC-11)
+	Made with	Створено за допомогою
+	SHA-256	SHA-256
+	Device	Пристрій

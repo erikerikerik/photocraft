@@ -28,3 +28,6 @@ PC-07 | photocraft | powershell -NoProfile -ExecutionPolicy Bypass -File agents/
 # PC-08 the AI mask paths of Select Subject and Remove Background (amendment 18): the mask the
 # provider answers with becomes the selection or the layer mask, stretched to the document.
 PC-08 | photocraft | cargo test -p photocraft-engine --lib ai_segment
+# PC-11 the record an AI layer carries (amendment 18, B16): the module and its format round trip,
+# the two commands that write it, and the Properties block that shows it.
+PC-11 | photocraft | cargo test -p photocraft-engine --lib ai_provenance && cargo test -p photocraft-engine --lib generative && cargo test -p photocraft-ui-egui --lib ai_props

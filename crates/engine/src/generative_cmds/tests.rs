@@ -487,3 +487,46 @@ fn a_non_boolean_sample_all_layers_is_a_bad_params_error() {
         assert!(s.execute(CMD, json!({"sampleAllLayers": value})).is_ok(), "{value}");
     }
 }
+
+/// The record a layer carries, if it has one (PC-11).
+fn record_of(s: &Session, id: LayerId) -> Option<ai_provenance::Record> {
+    ai_provenance::read(s.active().unwrap().doc.layer(id).unwrap())
+}
+
+/// B16 (amendment 18): the layer a fill makes remembers what made it, in the same undo step that
+/// creates it. The command result already said so (PC-08); now the layer does too.
+#[test]
+fn the_new_layer_keeps_a_record_of_the_model_that_made_it() {
+    let mut s = blob_session(8);
+    let base = active_id(&s);
+    use_provider(&mut s, FakeProvider::default());
+    let r = s.execute(CMD, json!({})).unwrap();
+    let new = active_id(&s);
+    let record = record_of(&s, new).unwrap_or_else(|| panic!("the new layer carries no record: {r}"));
+    assert_eq!(record.command, ai_provenance::CMD_GENERATIVE_FILL, "which command made the layer");
+    assert_eq!(record.model, "solid-fill", "the model that ran");
+    assert_eq!(record.model_version.as_deref(), Some("epoch_244"), "the model build that ran");
+    assert_eq!(record.model_sha256.as_deref(), Some("58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c"), "the model file it ran");
+    assert_eq!(record.device, "CPU", "the backend that ran");
+    assert_eq!(record.device_name.as_deref(), Some("CPU"), "the hardware it ran on");
+    // Only the layer the job made gets a record: the layer it sampled keeps none.
+    assert_eq!(record_of(&s, base), None, "the source layer is untouched");
+    // The record is part of the same history step, so one undo removes both.
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(named(&s, "Generative Fill"), None, "one undo removes the layer and its record");
+}
+
+/// Amendment 18: a later job with a newer model build never rewrites the record an older one left.
+#[test]
+fn a_newer_model_build_leaves_the_older_layers_record_alone() {
+    let mut s = blob_session(8);
+    use_provider(&mut s, FakeProvider::default());
+    s.execute(CMD, json!({})).unwrap();
+    let first = named(&s, "Generative Fill").unwrap();
+    let first_record = record_of(&s, first).unwrap();
+    use_provider(&mut s, FakeProvider { model_version: Some("epoch_999".into()), ..Default::default() });
+    s.execute(CMD, json!({})).unwrap();
+    let second = named(&s, "Generative Fill 2").unwrap();
+    assert_eq!(record_of(&s, second).unwrap().model_version.as_deref(), Some("epoch_999"), "the new layer records the build that ran");
+    assert_eq!(record_of(&s, first), Some(first_record), "the older layer keeps what its own run left there");
+}
