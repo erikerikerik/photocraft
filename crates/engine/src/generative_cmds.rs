@@ -11,6 +11,7 @@ use photocraft_color::{ColorMode, SampleType};
 use serde_json::{Value, json};
 
 use crate::ai::{self, AiError, AiOutput, AiRequest, AiTask};
+use crate::ai_provenance;
 use crate::commands::CommandSpec;
 use crate::edit_menu_cmds::{self, FillWindow, FilledWindow};
 use crate::{EngineError, Result, Session};
@@ -119,15 +120,18 @@ fn run(s: &mut Session, p: &Value) -> Result<Value> {
             let result = ai::run_to_completion(provider.as_ref(), &req, ctx, POLL_EVERY).map_err(EngineError::from)?;
             ctx.progress(1.0, LABEL);
             let ai = provenance(&result);
+            // What made the layer goes on the layer as well, in the same undo step that creates it
+            // (amendment 18, PC-11). `ai` is the same facts in the command result.
+            let record = ai_provenance::Record::from_result(ai_provenance::CMD_GENERATIVE_FILL, &result);
             // A fill asked for pixels; a mask back would be a provider bug, not a document one.
             let AiOutput::Image { pixels, .. } = result.output else {
                 return Err(EngineError::Other("The AI provider returned a mask to a fill request".into()));
             };
-            Ok((FilledWindow { filled: pixels, bounds, original, cover, n_hole }, ai))
+            Ok((FilledWindow { filled: pixels, bounds, original, cover, n_hole }, ai, record))
         },
-        move |s, (done, ai)| {
+        move |s, (done, ai, record)| {
             let name = s.active().map_or_else(|| LABEL.to_string(), |st| edit_menu_cmds::fill_layer_name(&st.doc, LABEL));
-            let mut result = edit_menu_cmds::apply_content_aware_fill(s, LABEL, id, "new", fmt, window, done, &name)?;
+            let mut result = edit_menu_cmds::apply_content_aware_fill(s, LABEL, id, "new", fmt, window, done, &name, Some(&record))?;
             // The provenance travels with the result, so a "Generative Fill" layer can be traced
             // to the model that made it (B08; U04 shows it on the layer).
             if let Some(fields) = result.as_object_mut() {
@@ -147,7 +151,7 @@ pub fn specs() -> Vec<CommandSpec> {
         label: "Generative Fill…",
         menu: &["Edit"],
         shortcut: None,
-        params: r##"{"prompt":string?,"sampleAllLayers":bool=false} … {layer,filled,window,ai:{model,device,provider,elapsedMs},note?} (fills the selection through the AI provider onto a new "Generative Fill" layer; ai says where the work ran; note says when 32-bit values were clamped)"##,
+        params: r##"{"prompt":string?,"sampleAllLayers":bool=false} … {layer,filled,window,ai:{model,device,provider,elapsedMs},note?} (fills the selection through the AI provider onto a new "Generative Fill" layer; ai says where the work ran, and the new layer keeps that record; note says when 32-bit values were clamped)"##,
         enabled: edit_menu_cmds::can_fill,
         run,
         journal: true,

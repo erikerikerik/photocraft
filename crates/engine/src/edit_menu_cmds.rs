@@ -445,7 +445,7 @@ fn content_aware_fill_as(s: &mut Session, p: &Value, cmd: &'static str, label: &
         },
         move |s, done| {
             let name = s.active().map_or_else(|| "Content-Aware Fill".to_string(), |st| st.doc.next_layer_name("Content-Aware Fill"));
-            apply_content_aware_fill(s, label, id, &output, fmt, window, done, &name)
+            apply_content_aware_fill(s, label, id, &output, fmt, window, done, &name, None)
         },
     )
 }
@@ -571,6 +571,10 @@ pub(crate) fn apply_content_aware_fill(
     window: Rect,
     done: FilledWindow,
     layer_name: &str,
+    // What made the layer, stored on it in the same undo step (amendment 18, PC-11). Only the new
+    // layer a fill creates gets one: a duplicate keeps the record of the layer it came from, and
+    // filling in place leaves that layer's own record alone.
+    record: Option<&crate::ai_provenance::Record>,
 ) -> Result<Value> {
     let n = fmt.channels();
     let (w, h) = (window.width() as usize, window.height() as usize);
@@ -592,6 +596,9 @@ pub(crate) fn apply_content_aware_fill(
                 if let Some(s) = l.surface_mut() {
                     s.write_region(window, &px);
                     s.prune();
+                }
+                if let Some(record) = record {
+                    crate::ai_provenance::write(&mut l, record)?;
                 }
                 let nid = doc.insert_above(Some(id), l);
                 *active = Some(nid);

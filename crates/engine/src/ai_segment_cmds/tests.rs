@@ -497,3 +497,49 @@ fn a_mask_that_selects_nothing_is_not_a_selection() {
     assert_eq!(region.bbox, Rect::new(2, 1, 4, 3), "the box of the pixels it touches");
     assert_eq!(region.mask, vec![255, 0, 0, 128], "8-bit coverage over that box");
 }
+
+/// B16 (amendment 18): the AI mask leaves a record of the model on the layer it masked, in the same
+/// history step as the mask; undo takes both, redo brings both back.
+#[test]
+fn the_ai_mask_records_the_model_and_undo_takes_the_record_with_the_mask() {
+    let mut s = white(60, 40);
+    let id = active_id(&s);
+    use_provider(&mut s, mask_provider());
+    s.execute(RB, json!({"method": "ai"})).unwrap();
+    let record = ai_provenance::read(layer(&s, id)).unwrap_or_else(|| panic!("the masked layer carries no record"));
+    assert_eq!(record.command, ai_provenance::CMD_REMOVE_BACKGROUND, "which command masked the layer");
+    assert_eq!(record.model, "solid-fill", "the model that ran");
+    assert_eq!(record.model_version.as_deref(), Some("epoch_244"), "the model build that ran");
+    assert_eq!(record.model_sha256.as_deref(), Some("58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c"), "the model file it ran");
+    assert_eq!(record.device, "CPU", "the backend that ran");
+    assert_eq!(record.device_name.as_deref(), Some("CPU"), "the hardware it ran on");
+    assert!(layer(&s, id).mask.is_some(), "the mask is there");
+    s.execute("edit.undo", json!({})).unwrap();
+    assert!(layer(&s, id).mask.is_none(), "undo took the mask");
+    assert_eq!(ai_provenance::read(layer(&s, id)), None, "and the record with it");
+    s.execute("edit.redo", json!({})).unwrap();
+    assert!(layer(&s, id).mask.is_some(), "redo brought the mask back");
+    assert_eq!(ai_provenance::read(layer(&s, id)), Some(record), "and the record too");
+}
+
+/// The classical path has no model to remember, so it writes nothing (PC-11).
+#[test]
+fn the_classical_mask_records_nothing() {
+    let mut s = disc();
+    let id = active_id(&s);
+    s.execute(RB, json!({"method": "classical"})).unwrap();
+    assert!(layer(&s, id).mask.is_some(), "the classical mask landed");
+    assert_eq!(ai_provenance::read(layer(&s, id)), None, "with no record on the layer");
+}
+
+/// Select Subject makes a selection, not a layer, so the provenance stays in the command result
+/// (amendment 18): nothing is stored on the layer that was sampled.
+#[test]
+fn select_subject_stores_no_record_on_the_layer() {
+    let mut s = white(60, 40);
+    let id = active_id(&s);
+    use_provider(&mut s, mask_provider());
+    let out = s.execute("select.subject", json!({"method": "ai"})).unwrap();
+    assert_eq!(out["ai"]["model"].as_str().unwrap(), "solid-fill", "the result still says where it ran: {out}");
+    assert_eq!(ai_provenance::read(layer(&s, id)), None, "a selection is not a layer result");
+}

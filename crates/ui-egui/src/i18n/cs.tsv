@@ -3819,3 +3819,7 @@ navigator	Zoom	Zvětšení
 	GPU Memory (MB, 0 = Automatic)	Paměť GPU (MB, 0 = Automaticky)
 	{name} was changed by another app after it was opened or saved here.	Soubor {name} změnila jiná aplikace poté, co byl zde otevřen nebo uložen.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Nahraďte ho tímto dokumentem, nebo zrušte a použijte Soubor › Uložit jako, abyste zachovali obojí.
+# Properties › Made with: the AI model that made or masked the layer (PC-11)
+	Made with	Vytvoreno pomoci
+	SHA-256	SHA-256
+	Device	Zařízení

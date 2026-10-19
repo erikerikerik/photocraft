@@ -1201,6 +1201,21 @@ mod tests {
         assert_eq!(tr(Lang::EN, "Seafoam"), "Seafoam");
     }
 
+    /// The Properties "Made with" block builds its row labels from variables (PC-11), so the
+    /// literal scan cannot see them; each label still needs an entry in every complete catalog.
+    #[test]
+    fn ai_provenance_labels_are_translated() {
+        for lang in Lang::all().filter(|l| l.complete_menus()) {
+            let cat = lang.0.catalog();
+            for label in ["Made with", "Model", "Version", "SHA-256", "Device"] {
+                assert!(cat.plain(label).is_some(), "{} missing {label}", lang.code());
+            }
+        }
+        let de = lang_from_tag("de").unwrap();
+        assert_eq!(tr(de, "Made with"), "Erstellt mit");
+        assert_eq!(tr(lang_from_tag("ja").unwrap(), "Device"), "デバイス");
+    }
+
     /// These labels are passed to `tl!` dynamically, so the literal coverage scan misses them.
     #[test]
     fn russian_dynamic_selection_theme_and_measurement_labels_are_translated() {
