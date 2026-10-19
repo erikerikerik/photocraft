@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - Erik queues MG-13 after current Strata work
+
+Erik directly supplied the MG-13 build prompt: egui in the same process as `caim open`, library calls rather than CLI; CAIM `agents/CAIM-UI-BRIEF.md` is authoritative; one state-model test per row in sections 4.1–4.4 plus size formatting; skip section 6 decisions; one product PR, receipt and HANDOFF. The detailed brief is merged in CAIM #12 (`1602459`).
+
+Added `agents/prompts/local-mg-13.md` and updated the local autopilot queue: finish current claimed work, then MG-13 next. No active session interrupted or second worker started. MG-12 is done, and Erik's direct authorization supplies the scoped design gate; section 6 remains pending. SAM/ComfyUI holds stay. Product review/CI gates remain mandatory.
+
 ## 2026-10-19 (12:30 PT): Codex-Strata - UP-05 review round 2 brings one P2; #68 parked at the two-round cap
 
 - **Round 2 is in, and it is the last one allowed.** The review bot answered on `59879f286` at 19:20:07Z, three minutes after Codex-cloud had already approved that head by hand and marked #68 ready. One finding, P2 at `crates/ipp/src/lib.rs:178`: a scoped link-local server (`CUPS_SERVER=fe80::1%3:631`) is parsed on purpose (`crates/ipp/src/lib.rs:142` lets a port follow a `%`) and then sent as `Host: [fe80::1%3]:631` and `ipp://[fe80::1%3]:631/printers/...`, where RFC 6874 wants the zone written `%25...`. It is real and reachable: measured here, `("fe80::1%3", 631).to_socket_addrs()` resolves to `[fe80::1%3]:631`, while `fe80::1%eth0` answers `11001` (no such host) on Windows, so only numeric zone ids get that far.
