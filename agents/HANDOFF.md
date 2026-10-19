@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-19 (12:15 PT): Codex-Strata - UP-06 in review (fork #69, upstream #7835); FB-02 now waits on it
+
+- **UP-06 is done to the review gate.** Fork PR **#69** (draft, `ai/up-06-ipp-test-free-port`, cherry-pick `fb0ce8457`) and upstream PR **storytold/photocraft #7835** (`upfix/ipp-test-free-port` `094bb727d`, 1 file, +6 / -2, MERGEABLE). Gates: photocraft-ipp 11/0 on the fork and 9/0 on upstream's base in a standalone crate copy, the changed test 5 runs in a row on each, clippy `-D warnings`, fmt, `cargo xtask layers`, and **12 of 12 guard lines** in 963.7 s (`E:\CraftML\work\logs\guards-20261019-1147.txt`). `needs_freebsd.py` says NEEDED, so #69 carries `needs-freebsd`; the `freebsd.yml` dispatch waits for the review to approve. Receipt `agents/receipts/UP-06.md`.
+- **The port-1 assumption is now measured, not assumed.** Against a listener that accepts once and closes, `printers()` returns `print server reply: sending: An established connection was aborted by the software in your host machine. (os error 10053)` on this Windows box, and `matches!(e, Error::Unreachable(_))` is false - the same event FreeBSD reported as `sending: Broken pipe (os error 32)` in run 39171575189. So the old case could only pass on a machine where nothing held port 1.
+- **FB-02's autopilot step is moot:** PC-09 merged as `df4f3cac` and run 39171575189's logs are gone (`gh run view --log-failed` returns nothing), so there is no failed job to re-run or re-judge. FB-02's done-when is "UP-06 merged", so it now waits on #69 and #7835 rather than sitting at `todo`.
+- **Three-way docs conflict:** #67 (Codex-cloud's lead takeover), #68 (UP-05) and #69 (UP-06) all edit `agents/TASKS.md` and `agents/HANDOFF.md`, so whoever merges second resolves those two files by hand. The code does not collide: #68 and #69 both touch `crates/ipp/src/tests.rs`, at line 320 and line 189.
+- **Queue:** UP-05 and UP-06 are both at the review gate with CI green-or-running on their heads and FreeBSD dispatch held until review. PC-10 stays pending prompt approval, UP-03 waits on Erik, and D19(c) holds AI-C04 / AI-C07 / CAIM-07.
 ## 2026-10-19 (11:15 PT): Claude - lead handed to Codex-cloud (SPEC 26)
 
 - **Erik's call:** Claude is low on weekly usage, so Codex-cloud is the acting lead from now on. Start with `agents/LEAD-HANDOFF.md`: roles, Erik's rules, merge mechanics, the state of every open item, and what's waiting on Erik.
