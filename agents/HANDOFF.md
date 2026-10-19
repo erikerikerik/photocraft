@@ -1,5 +1,19 @@
 ﻿# HANDOFF
 
+## 2026-10-18 (18:45 PT): Codex-Strata (autopilot) - UP-03 does not reproduce; the call is Erik's
+
+- **UP-03 is `blocked`, not `review`.** Codex-cloud's finding on SY-03 PR #37 (comment 4306663245, `crates/text/src/layout.rs:660`) says box text takes `break_scale` from runs outside the paragraph being laid out. It does not: `content_end` is *this paragraph's* content end (`crates/text/src/layout.rs:529`), computed by `strip_break` (`crates/text/src/layout.rs:1159`), which trims the paragraph terminator, so `content_end <= prange.end`; the filter at `crates/text/src/layout.rs:660` is `rs.max(prange.start) < end.min(content_end)`, so a run that starts after this paragraph has `rs >= prange.end >= content_end` and is dropped. Receipt: `agents/receipts/UP-03.md`.
+
+- **The prompt's own test is the proof.** Two paragraphs in a box, second at `horizontal_scale: 2.0`, first paragraph's line ranges and glyph placement compared against the same text as one paragraph, at Left/Right/Center: it **passes** on unmodified `v0.10.0` and on `upstream/main` `4d4de453`, and it **fails** when the clamp is widened to `end.min(text.len())` (`left: [0..10, 10..20, 20..26, ...]` vs `right: [0..20, 20..40, 40..60, ...]`). So the test is sensitive to the bug and the bug is not in the code. Logs: `E:\CraftML\work\logs\up03-check3.txt`, `up03-check5.txt`.
+
+- **Step 1 of the prompt (check upstream first) is also empty.** `git diff v0.10.0..upstream/main -- crates/text/src/layout.rs` is 22 added lines, all the Korean word-break work (#5959). Open upstream #6230 (area type) rewrites around the filter but keeps it (`is_box` -> `wraps`); #6327 touches only `crates/text/src/psd.rs`. Diff: `E:\CraftML\work\logs\up03-pr6230.diff`.
+
+- **Erik's call:** close UP-03 as not-a-bug, or ask me to re-check after #6230 lands. I did **not** open an upstream PR, did not push `upfix/text-box-break-scale`, and did not add the test to upstream's `crates/text/src/tests.rs` - a test for a bug that does not exist would be rejected upstream, and D13 only allows a PR per real bug. The test itself is kept uncommitted in scratch worktree `E:\CraftML\work\wt\up-03` (branch `upfix/text-box-break-scale`, tracks `upstream/main` - never push it) in case Erik wants it.
+
+- **Other threads:** PC-11 fork PR #54 passed Codex-cloud's round-2 review at 18:42 PT with no findings (`bd5f171b` fixed both P1/P2, `49437bd4` is the head); CI restarted by that push, merge when it is green. PC-09 fork PR #49 is still waiting on FreeBSD run 39180123752. MG-11 (CAIM PR #9) stays `parked` on Erik's hardware: free the 4090, then `caim cuda install --accept-note`, then the three card goldens.
+
+- **Next up is UP-04** (`crates/ipp/src/lib.rs` ~145, `Endpoint::connect` uses only the first `to_socket_addrs` answer). Two environment limits Erik should know: this machine's GitHub token is **fork-only**, so `upfix/*` branches get pushed to the fork and the exact upstream PR title/body goes in the receipt for him to open; and `cargo` cannot fetch new crates here (`schannel: SEC_E_NO_CREDENTIALS`), so an `upstream/main` tree cannot be built - gates run against our `v0.10.0` copy of `crates/ipp`.
+
 ## 2026-10-18 (16:20 PT): Claude - PC-09's FreeBSD run hit an upstream flake (FB-02 / UP-06)
 
 - **PC-09 (PR #49):** CI is green and Codex-cloud approved. FreeBSD x86_64 failed one test in upstream's `photocraft-ipp`: it assumes 127.0.0.1:1 is closed, but on the VM something accepted and reset the connection. That isn't PC-09's code. Claude re-runs the failed jobs when the run finishes.
