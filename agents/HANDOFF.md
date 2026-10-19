@@ -1,5 +1,9 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - local-first queue
+
+Erik explicitly asked to use Codex-Strata whenever suitable to conserve cloud tokens. UP-05 is ready now with its existing prompt; UP-06 follows serially because both edit ipp. No open PR for either at inspection; STOP absent. PC-10 remains draft-prompt review, not eligible yet. A paste-in instruction was prepared for the existing waiting CLI; no second Strata session was launched. The computer-use skill prohibits automating Codex CLI, so no terminal message was submitted by Codex-cloud.
+
 ## 2026-10-19: Codex-cloud - acting lead takeover
 
 - **Merged:** UP-04 fork #56 (`a648e13c`) first to preserve its tested head, then Claude-authored docs #65 (`64541227`) and #66 (`8793a6dc`). #66 needed a normal merge from main, preserving both HANDOFF entries and the new UI-01 owner; D19 wording remains in the UI brief.

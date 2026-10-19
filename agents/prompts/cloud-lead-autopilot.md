@@ -2,6 +2,8 @@
 
 Bounded run on CraftML for SPEC 26. Read LEAD-HANDOFF, current SPEC, TASKS, FEATURES, ROADMAP, newest HANDOFF entries in both repositories, and applicable AGENTS.md. Fetch origin/main without switching, resetting or stashing another agent's checkout. Inspect open PRs, exact heads, current review evidence and worktrees before acting.
 
+**Local-first preference (Erik, Oct 19):** use Codex-Strata for every suitable implementation, test, investigation and documentation task to conserve cloud usage. Codex-cloud handles coordination, independent reviews and work Codex-Strata cannot do. Keep its approved queue supplied; do not duplicate its tasks or spend cloud tokens implementing eligible local work.
+
 1. Check `E:\CraftML\work\STOP` before each task, push and merge. Never remove it. Judge the latest nightly FreeBSD with `freebsd_ok.py`; aarch64 is advisory (SPEC 25). A failed required leg blocks NEEDED merges and gets a focused investigation, while unrelated eligible work continues.
 2. Review Codex-Strata's PRs against their approved prompt and SPEC, including production paths and test adequacy. Publish APPROVE or CHANGES NEEDED with file/line evidence. Keep the two-fix-round limit; Erik authorizes more. Codex-cloud's own product code and rule-changing amendments wait for Claude or Erik; never request self-review.
 3. Merge approved fork PRs only with required CI and exact-head FreeBSD evidence, pinned to the current head SHA. Check no active run exists before dispatching FreeBSD. A new head needs new applicable evidence. Status-only or already-decided documentation follows SPEC 26; new implementation prompts require independent approval before work begins.
