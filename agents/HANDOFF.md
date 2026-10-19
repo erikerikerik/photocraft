@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19 (10:30 PT): Claude - MG-11 on the card: works, with a by-hand workaround; MG-11b filed
+
+- **Erik ran the card goldens; all three fell back to the CPU.** Codex (desktop, on CraftML) found why. ONNX Runtime silently dropped a CUDA provider that couldn't start, because the provider DLLs weren't next to the test executable (`ort-sys` copies them only into `target\<profile>\` when it can't symlink). And cuDNN couldn't find one of its own sub-libraries. With both worked around by hand, 3/3 passed. Timings are in CAIM `agents/receipts/MG-11-4090-followup.md`.
+- **CAIM PR #10** holds Codex's uncommitted changes, committed unchanged by Claude: `error_on_failure()` so the real error reaches `backend_init_failed`, and the golden's decision fix. Claude reviewed it; merge after CI.
+- **MG-11b** (Codex, prompt `agents/prompts/cloud-mg-11b.md`) is the permanent fix, then the `cuda = "supported"` flip. Needs the card, so Strata is stopped while it runs.
+
 ## 2026-10-19 (10:05 PT): Claude - D19: craft-ai-integrations overlap, hybrid
 
 - **Found:** upstream's `storytold/craft-ai-integrations` is an in-process AI layer for all Craft apps (provider trait, catalogue with SHA-256 and licence, consent, egui widgets, ComfyUI, SAM 3, Candle/Burn engines). First draft; no app adopts it end to end; no real local engine; Remove Background has no local recipe. Its `docs/STATUS.md` says the maintainers have suggested a daemon with IPC, with no wire format defined. That is the role CAIM already plays.
