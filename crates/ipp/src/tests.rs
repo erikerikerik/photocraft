@@ -192,6 +192,26 @@ fn error_statuses_and_broken_replies_are_errors() {
 }
 
 #[test]
+fn a_server_name_that_resolves_to_several_addresses_is_tried_at_each_one() {
+    // A print server whose name resolves to more than one address (dual-stack, multihomed): the
+    // first answer is not serving CUPS and a later one is. `localhost` is that name on any
+    // dual-stack box; the port is one that held a listener a moment ago, so the first attempt is
+    // refused and only a later address can open.
+    let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+    let addrs = ("localhost", port).to_socket_addrs().unwrap().collect::<Vec<_>>();
+    assert!(addrs.len() > 1, "localhost resolves to {addrs:?}: this test needs a name with two addresses");
+    let listeners = addrs[1..].iter().map(|a| std::net::TcpListener::bind(a).unwrap()).collect::<Vec<_>>();
+    let ep = Endpoint::Tcp("localhost".into(), port);
+    assert!(ep.reachable(), "{} is closed but {} serves the port", addrs[0], addrs[1]);
+    drop(listeners);
+    // With nothing listening anywhere, every address is still tried and the answer is the same.
+    let e = printers(&ep).unwrap_err();
+    assert!(matches!(e, Error::Unreachable(_)), "{e}");
+}
+
+#[test]
 fn reply_parsing_is_bounded() {
     assert!(Reply::parse(&[]).is_err());
     assert!(Reply::parse(&[2, 0, 0, 0, 0, 0, 0, 1]).is_err(), "no end tag");
