@@ -35,12 +35,12 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | UP-02 | Fix 3 upstream bugs | Offered upstream (#7240-7242), merged in the fork Oct 18 | Done | Codex-Strata | PR #29 |
 | BF-04 | Endpoint file safety check | Refuse a manager file other users can read (matches upstream v0.10.0) | Done | Codex-Strata | PR #34 |
 | SY-03 | Sync to upstream v0.10.0 | Fork is on upstream v0.10.0 (merged Oct 18) | Done | Codex-Strata | PR #37 |
-| MG-11 | CUDA on the 4090 | CUDA on the 4090 with CPU fallback; your 4090 timing run is still to do | Done | Codex-Strata | CAIM #9, #10 |
-| MG-11b | CUDA libraries load cleanly | Card goldens pass with no manual step; flip cuda = supported | Up next | Codex-cloud (desktop, on CraftML, Strata stopped) | prompts/cloud-mg-11b.md |
+| MG-11 | CUDA on the 4090 | CUDA on the 4090 with CPU fallback; clean card timings are recorded in MG-11b, pending its merge | Done | Codex-Strata | CAIM #9, #10 |
+| MG-11b | CUDA libraries load cleanly | Card goldens pass with no manual step; flip cuda = supported | In review | Codex-cloud; Claude reviews | CAIM #11; 3/3 card goldens, CI green |
 | PC-11 | Model info on layers | Properties shows which model made a layer | Done | Codex-Strata | PR #54 |
-| UI-01 | Manager window design | The calm one-column 1d design | Up next | Codex-cloud + Erik (was Claude) |  |
-| PC-10 | Open Craft AI Manager button | One button in every AI message | Planned | Codex-Strata | after PC-09, MG-12 |
-| MG-13 | Manager window | Model list, downloads, licence notes, disk use | Planned | Codex-Strata | after UI-01 |
+| UI-01 | Manager window design | The calm one-column 1d design | Waiting on you (current widget hold) | Codex-cloud + Erik |  |
+| PC-10 | Open Craft AI Manager button | One button in every AI message | In review (prompt only) | Codex-Strata; Claude reviews prompt | prompts/local-pc-10.md; dependencies done |
+| MG-13 | Manager window | Model list, downloads, licence notes, disk use | Waiting on you (current widget hold) | Codex-Strata | after UI-01 |
 | BH-02 | M2 bug hunt | Sweep everything M2 added before sign-off | Planned | Claude + Codex-cloud + Codex-Strata |  |
 | PC-12 | M2 sign-off | Your hands-on check on the 4090 | Planned | Codex-Strata + Erik |  |
 
@@ -91,3 +91,7 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | DML | Non-NVIDIA GPUs | DirectML (D10: later) | Planned | Codex-Strata |  |
 | MAS | Mac (Apple Silicon) | Starts with the MAS-00 build probe | Planned | Erik + Claude |  |
 | FDY | Our own models (Foundry) | Clean training data, parked | Planned |  | parked |
+
+## Lead status, Oct 19
+
+UP-04 fork fix merged in #56 (`a648e13c`); its upstream PR still awaits Erik. This housekeeping task was not one of the dashboard's 57 rows, so the 26/57 count is unchanged. #65 and #66 are merged. MG-11b is tested in CAIM #11, awaiting Claude. PC-10 has a draft prompt only and must not start before independent prompt approval. UP-05 and UP-06 remain Codex-Strata's queue. Current session instructions hold UI-01/MG-13 widgets; historical D19 text does not release them.

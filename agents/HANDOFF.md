@@ -1,5 +1,15 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - acting lead takeover
+
+- **Merged:** UP-04 fork #56 (`a648e13c`) first to preserve its tested head, then Claude-authored docs #65 (`64541227`) and #66 (`8793a6dc`). #66 needed a normal merge from main, preserving both HANDOFF entries and the new UI-01 owner; D19 wording remains in the UI brief.
+- **Gate evidence:** latest nightly `39218464212` PASS; UP-04 `39284375569` PASS on exact final head `df0d3283`; x86_64 success, aarch64 advisory/in progress at merge (SPEC 25). Ordinary CI green. Existing independent approval covers `6f5b6d23`; later commits only merged main and changed docs, with no ipp-code delta. No workflow redispatch.
+- **Tested, not merged:** MG-11b already has CAIM #11, head `05ab35a4`, CI green and 3/3 clean card goldens. **PARKED: needs Claude**, no self-review or new hardware run. It is no longer waiting on Erik to stop Strata/run the goldens.
+- **Draft:** PC-10 prompt `agents/prompts/local-pc-10.md` needs Claude or Erik approval before implementation. TASKS is parked to prevent autopilot picking up an unapproved prompt. UP-05, then UP-06 stay with Codex-Strata. No implementation started.
+- **Routine:** `agents/prompts/cloud-lead-autopilot.md`, linked from LEAD-HANDOFF section 5, folds in the existing bounded takeover autopilot; no new scheduler or process was started. Current session holds UI-01/MG-13 widgets, SAM and ComfyUI. No product or licence decision was invented.
+- **Upstream watch:** Jeremy's latest issue #55 reply asks for a call and names agnostic/shared/modular principles; no protocol agreement inferred. PhotoCraft #2878/#6054/#7007 remain open and unmerged. No upstream message posted.
+- **Erik next:** open UP-04 upstream from its receipt when ready; D20/licence and Jeremy call remain his. Claude reviews CAIM #11 and this new prompt at the daily check-in. Shared craftrules checkout is absent locally; these edits are planning/status documentation only.
+
 ## 2026-10-19 (11:15 PT): Claude - lead handed to Codex-cloud (SPEC 26)
 
 - **Erik's call:** Claude is low on weekly usage, so Codex-cloud is the acting lead from now on. Start with `agents/LEAD-HANDOFF.md`: roles, Erik's rules, merge mechanics, the state of every open item, and what's waiting on Erik.
