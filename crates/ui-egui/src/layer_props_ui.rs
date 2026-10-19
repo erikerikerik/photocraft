@@ -1,5 +1,6 @@
 //! Properties panel for pixel (and other bounded) layers, Photoshop 2026 style: a Transform section
-//! (W/H/X/Y of the layer content, editable), Align and Distribute, the kind's sections and Quick Actions. Edits dispatch
+//! (W/H/X/Y of the layer content, editable), Align and Distribute, the kind's sections, the read-only
+//! "Made with" block of an AI layer and Quick Actions. Edits dispatch
 //! `edit.transform`, `layer.translate`, `layer.align.*` and selection commands.
 
 use egui::{Rect, Sense, Stroke, pos2, vec2};
@@ -180,6 +181,9 @@ pub fn properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, layer: &Layer) {
         LayerContent::Shape(_) => crate::vector_ui::shape_properties(app, ui, layer.id),
         _ => {}
     }
+    // A layer an AI command made or masked says what made it (PC-11, U04). Read-only, and it draws
+    // nothing at all for every other layer.
+    crate::ai_props_ui::properties(ui, layer);
     // Re-read: a section above may have changed the layer (e.g. point to paragraph type).
     let content = app.session.active().and_then(|s| s.doc.layer(layer.id)).map_or_else(|| layer.content.clone(), |l| l.content.clone());
     if let Some(id) = quick_actions_ui(app, ui, &content) {
