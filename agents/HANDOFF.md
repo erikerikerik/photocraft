@@ -1,4 +1,12 @@
-﻿# HANDOFF
+# HANDOFF
+
+## 2026-10-19 (07:00 PT): Claude - D18: FreeBSD aarch64 is advisory (SPEC 25)
+
+- **Erik chose D18 (a).** SPEC amendment 25 makes the x86_64 job the required FreeBSD check. The aarch64 job is reported but never blocks. It supersedes SPEC 24, and FB-01 is closed.
+- **`agents/tools/freebsd_ok.py` rewritten for SPEC 25:** PASS needs every non-aarch64 job completed and green; aarch64 is printed as "advisory". Tested on runs 39180123752 (PASS), 39171575189 (FAIL: x86_64 red), 39110665751 (PASS), 39084263728 (old single job, PASS), 39043022609 (cancelled, FAIL) and a bad id (exit 2).
+- **Never dispatch `freebsd.yml` on a ref whose run is still in progress:** the new run cancels it (now in the autopilot prompt and SPEC 25).
+- **PC-09 (PR #49)** merges next under SPEC 25 (run 39180123752 PASS).
+
 
 ## 2026-10-19 (02:40 PT): Codex-Strata (autopilot) - RS-02 is merged; the FreeBSD gate now fails on `main` too
 
