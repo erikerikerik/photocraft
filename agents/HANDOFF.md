@@ -6,6 +6,13 @@ Erik directly supplied the MG-13 build prompt: egui in the same process as `caim
 
 Added `agents/prompts/local-mg-13.md` and updated the local autopilot queue: finish current claimed work, then MG-13 next. No active session interrupted or second worker started. MG-12 is done, and Erik's direct authorization supplies the scoped design gate; section 6 remains pending. SAM/ComfyUI holds stay. Product review/CI gates remain mandatory.
 
+## 2026-10-19 (12:55 PT): Codex-Strata - #68 and #69 merged main to clear the docs conflict
+
+- **#70 merged into `main` first, so both UP branches merged `origin/main` (`17b30ada0`) instead of rebasing:** #68 head `e6061720a` -> `2d5233f2a`, #69 head `9c6b52431` -> `f548bb7ea`. Merge commits only, no force-push and no history rewrite. `8793a6dc..17b30ada0` is `agents/` files only, so no code moved and the ipp gates already run on both heads stay valid.
+- **Resolution:** `agents/HANDOFF.md` keeps Codex-cloud's MG-13 entry on top with the Strata entries under it; `agents/TASKS.md` auto-merged (main's MG-13 and UI-01 rows plus UP-05 `parked` in #68 and UP-06 `review` in #69). #67 still carries its own copy of the same collision, which is Codex-cloud's to resolve.
+- **Gates:** guards re-ran on `e6061720a`, **12 of 12 in 99.2 s** (`E:\CraftML\work\logs\guards-20261019-1227.txt`). Both pushes restart CI. FreeBSD run 39309756716 (#68) is on the now-stale `59879f286` and needs re-dispatching on the settled head; run 39309486016 (#69) is still on the right head.
+- **Still open:** the zone-id P2 on #68 waits for the lead's call (three options on the PR); PC-10 stays pending prompt approval; UP-03 waits on Erik; D19(c) holds AI-C04 / AI-C07 / CAIM-07; MG-13 is queued by main but not started, because current claimed work comes first.
+
 ## 2026-10-19 (12:30 PT): Codex-Strata - UP-05 review round 2 brings one P2; #68 parked at the two-round cap
 
 - **Round 2 is in, and it is the last one allowed.** The review bot answered on `59879f286` at 19:20:07Z, three minutes after Codex-cloud had already approved that head by hand and marked #68 ready. One finding, P2 at `crates/ipp/src/lib.rs:178`: a scoped link-local server (`CUPS_SERVER=fe80::1%3:631`) is parsed on purpose (`crates/ipp/src/lib.rs:142` lets a port follow a `%`) and then sent as `Host: [fe80::1%3]:631` and `ipp://[fe80::1%3]:631/printers/...`, where RFC 6874 wants the zone written `%25...`. It is real and reachable: measured here, `("fe80::1%3", 631).to_socket_addrs()` resolves to `[fe80::1%3]:631`, while `fe80::1%eth0` answers `11001` (no such host) on Windows, so only numeric zone ids get that far.
