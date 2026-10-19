@@ -193,28 +193,42 @@ fn error_statuses_and_broken_replies_are_errors() {
 
 #[test]
 fn every_resolved_address_is_tried_and_the_first_that_opens_wins() {
-    // The resolver handed over as a seam, so the order is the test's to choose and no host
-    // configuration is involved: the first address is closed, the second listens.
-    let closed = {
-        let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        probe.local_addr().unwrap()
-    };
+    // The resolver list and the connect call are both seams here, so the order is the test's to
+    // choose, no host configuration is involved, and no address counts as closed just because a
+    // port happened to be free a moment ago: the fake connector refuses what the test wants closed.
     let live = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let serving = live.local_addr().unwrap();
-    let stream = match connect_tcp("127.0.0.1", closed.port(), [closed, serving].into_iter()) {
+    // RFC 5737 documentation addresses: never reachable, and never contacted here either, because
+    // the fake connector answers for them.
+    let first: SocketAddr = "192.0.2.1:631".parse().unwrap();
+    let second: SocketAddr = "192.0.2.9:631".parse().unwrap();
+    let tried = std::cell::RefCell::new(Vec::new());
+    let open = |addr: SocketAddr| -> std::io::Result<TcpStream> {
+        tried.borrow_mut().push(addr);
+        if addr == serving { TcpStream::connect(serving) } else { Err(std::io::Error::other("the test refuses this address")) }
+    };
+    let stream = match connect_tcp("printserver", 631, [first, serving].into_iter(), open) {
         Ok(s) => s,
         Err(e) => panic!("the second address serves the port: {e}"),
     };
+    assert_eq!(*tried.borrow(), [first, serving], "every address is tried, in the order given");
     assert!(live.accept().is_ok(), "the connection opened on {serving}");
     drop(stream);
-    // Nothing listening anywhere: the caller hears about the last answer, not the first.
-    let e = match connect_tcp("127.0.0.1", closed.port(), [closed, closed].into_iter()) {
-        Ok(_) => panic!("nothing listens on {closed}"),
+    // Nothing listening anywhere: the caller hears about the last answer, not the first. The two
+    // answers say different things, so an implementation that kept the first error would be caught.
+    let open = |addr: SocketAddr| Err(std::io::Error::other(format!("{addr} is down")));
+    let e = match connect_tcp("printserver", 631, [first, second].into_iter(), open) {
+        Ok(_) => panic!("nothing listens on {first} or {second}"),
         Err(e) => e,
     };
-    assert!(matches!(&e, Error::Unreachable(m) if m.contains(&closed.port().to_string())), "{e}");
-    // A name that resolves to nothing still says so.
-    let e = match connect_tcp("nowhere", 631, std::iter::empty()) {
+    let message = match &e {
+        Error::Unreachable(m) => m.clone(),
+        other => panic!("expected Unreachable, got {other}"),
+    };
+    assert!(message.contains(&second.to_string()), "{e} does not name the last address");
+    assert!(!message.contains(&first.to_string()), "{e} keeps the first error, not the last");
+    // A name that resolves to nothing still says so, and nothing is attempted.
+    let e = match connect_tcp("nowhere", 631, std::iter::empty(), |_| Err(std::io::Error::other("no address means no attempt"))) {
         Ok(_) => panic!("no address was given"),
         Err(e) => e,
     };
@@ -226,21 +240,37 @@ fn a_server_name_that_resolves_to_several_addresses_is_tried_at_each_one() {
     // The same thing end to end, on a host where a name really does have several answers: the first
     // one is closed and a later one serves the port. `localhost` is that name on a dual-stack box;
     // on a single-stack host there is nothing to try, and the seam test above covers the logic.
-    let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = probe.local_addr().unwrap().port();
-    drop(probe);
-    let addrs = ("localhost", port).to_socket_addrs().unwrap().collect::<Vec<_>>();
-    if addrs.len() < 2 {
-        eprintln!("localhost resolves to one address ({addrs:?}) here: nothing to try, the seam test covers this");
+    // A free port, then the listeners on it. Another process can claim the port between the probe
+    // and the bind, so the pair is retried rather than assumed; the seam test above is the one that
+    // does not need a free port at all.
+    let mut port = 0;
+    let mut addrs = Vec::new();
+    let mut listeners = Vec::new();
+    for _ in 0..5 {
+        let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        port = probe.local_addr().unwrap().port();
+        drop(probe);
+        let found = ("localhost", port).to_socket_addrs().unwrap().collect::<Vec<_>>();
+        if found.len() < 2 {
+            eprintln!("localhost resolves to one address ({found:?}) here: nothing to try, the seam test covers this");
+            return;
+        }
+        let bound = found[1..].iter().map(std::net::TcpListener::bind).collect::<Vec<_>>();
+        if bound.iter().all(|b| b.is_ok()) {
+            addrs = found;
+            listeners = bound.into_iter().map(|b| b.unwrap()).collect();
+            break;
+        }
+    }
+    if listeners.is_empty() {
+        eprintln!("could not claim a free port on every address of localhost: skipping, the seam test covers this");
         return;
     }
-    let listeners = addrs[1..].iter().map(|a| std::net::TcpListener::bind(a).unwrap()).collect::<Vec<_>>();
     let ep = Endpoint::Tcp("localhost".into(), port);
     assert!(ep.reachable(), "{} is closed but {} serves the port", addrs[0], addrs[1]);
-    drop(listeners);
-    // With nothing listening anywhere, every address is still tried and the answer is the same.
-    let e = printers(&ep).unwrap_err();
-    assert!(matches!(e, Error::Unreachable(_)), "{e}");
+    // Nothing is checked after the listeners go away: whether the port is free again a moment
+    // later is not the test's to control, and the seam test above already shows that every address
+    // is tried and what the caller hears when none of them answers.
 }
 
 #[test]

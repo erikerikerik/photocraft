@@ -141,7 +141,7 @@ impl Endpoint {
             Endpoint::Unix(path) => Err(Error::Unreachable(format!("{}: Unix sockets are not available here", path.display()))),
             Endpoint::Tcp(host, port) => {
                 let addrs = (host.as_str(), *port).to_socket_addrs().map_err(|e| Error::Unreachable(format!("{host}:{port}: {e}")))?;
-                connect_tcp(host, *port, addrs)
+                connect_tcp(host, *port, addrs, |addr| TcpStream::connect_timeout(&addr, CONNECT))
             }
         }
     }
@@ -165,11 +165,17 @@ impl std::fmt::Display for Endpoint {
 
 /// Open the first address that answers, trying each one the resolver gave us: a name with several
 /// answers (dual-stack, multihomed) is not given up on after the first is refused. The last error is
-/// what the caller hears, so a server that is down still says why.
-fn connect_tcp(host: &str, port: u16, addrs: impl Iterator<Item = SocketAddr>) -> Result<Stream> {
+/// what the caller hears, so a server that is down still says why. The connect call is a parameter,
+/// so the loop can be tested without a network and without a port that has to be free.
+fn connect_tcp(
+    host: &str,
+    port: u16,
+    addrs: impl Iterator<Item = SocketAddr>,
+    mut open: impl FnMut(SocketAddr) -> std::io::Result<TcpStream>,
+) -> Result<Stream> {
     let mut last_error = None;
     for addr in addrs {
-        match TcpStream::connect_timeout(&addr, CONNECT) {
+        match open(addr) {
             Ok(s) => {
                 let _ = s.set_read_timeout(Some(REQUEST));
                 let _ = s.set_write_timeout(Some(REQUEST));
