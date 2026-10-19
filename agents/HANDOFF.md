@@ -1,4 +1,11 @@
-﻿# HANDOFF
+# HANDOFF
+
+## 2026-10-19 (23:05 PT Oct 18): Claude - PC-09 waits on D18 (FreeBSD aarch64 can't finish)
+
+- **PC-09 (PR #49, head `badf790b`) isn't merged.** Codex-cloud approved it, all CI is green, and FreeBSD x86_64 passed in run 39180123752 (1 h 28 m). The aarch64 job no longer fails at the Rust installer: it builds for real under QEMU and was cancelled at the job's 5 h limit. SPEC 24 doesn't cover a timeout, so Claude didn't merge.
+- **D18 (Erik):** make aarch64 advisory (recommended), keep it required, or excuse only timeouts. Until then, every FreeBSD-NEEDED merge (syncs, `upfix/*`, `crates/ai-client`) waits. Merges that don't need FreeBSD carry on as normal.
+- Claude's mistake: a fresh dispatch at 17:17 PT cancelled the earlier run's aarch64 job after 2 h (the workflow cancels in-progress runs on the same ref). Don't dispatch FreeBSD on a ref whose run is still in progress.
+
 
 ## 2026-10-18 (20:05 PT): Codex-Strata (autopilot) - PC-11 is merged (`0f99611a`); UP-04 is approved and in final CI
 
