@@ -192,16 +192,48 @@ fn error_statuses_and_broken_replies_are_errors() {
 }
 
 #[test]
+fn every_resolved_address_is_tried_and_the_first_that_opens_wins() {
+    // The resolver handed over as a seam, so the order is the test's to choose and no host
+    // configuration is involved: the first address is closed, the second listens.
+    let closed = {
+        let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        probe.local_addr().unwrap()
+    };
+    let live = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let serving = live.local_addr().unwrap();
+    let stream = match connect_tcp("127.0.0.1", closed.port(), [closed, serving].into_iter()) {
+        Ok(s) => s,
+        Err(e) => panic!("the second address serves the port: {e}"),
+    };
+    assert!(live.accept().is_ok(), "the connection opened on {serving}");
+    drop(stream);
+    // Nothing listening anywhere: the caller hears about the last answer, not the first.
+    let e = match connect_tcp("127.0.0.1", closed.port(), [closed, closed].into_iter()) {
+        Ok(_) => panic!("nothing listens on {closed}"),
+        Err(e) => e,
+    };
+    assert!(matches!(&e, Error::Unreachable(m) if m.contains(&closed.port().to_string())), "{e}");
+    // A name that resolves to nothing still says so.
+    let e = match connect_tcp("nowhere", 631, std::iter::empty()) {
+        Ok(_) => panic!("no address was given"),
+        Err(e) => e,
+    };
+    assert!(matches!(&e, Error::Unreachable(m) if m == "nowhere:631: no address"), "{e}");
+}
+
+#[test]
 fn a_server_name_that_resolves_to_several_addresses_is_tried_at_each_one() {
-    // A print server whose name resolves to more than one address (dual-stack, multihomed): the
-    // first answer is not serving CUPS and a later one is. `localhost` is that name on any
-    // dual-stack box; the port is one that held a listener a moment ago, so the first attempt is
-    // refused and only a later address can open.
+    // The same thing end to end, on a host where a name really does have several answers: the first
+    // one is closed and a later one serves the port. `localhost` is that name on a dual-stack box;
+    // on a single-stack host there is nothing to try, and the seam test above covers the logic.
     let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = probe.local_addr().unwrap().port();
     drop(probe);
     let addrs = ("localhost", port).to_socket_addrs().unwrap().collect::<Vec<_>>();
-    assert!(addrs.len() > 1, "localhost resolves to {addrs:?}: this test needs a name with two addresses");
+    if addrs.len() < 2 {
+        eprintln!("localhost resolves to one address ({addrs:?}) here: nothing to try, the seam test covers this");
+        return;
+    }
     let listeners = addrs[1..].iter().map(|a| std::net::TcpListener::bind(a).unwrap()).collect::<Vec<_>>();
     let ep = Endpoint::Tcp("localhost".into(), port);
     assert!(ep.reachable(), "{} is closed but {} serves the port", addrs[0], addrs[1]);
