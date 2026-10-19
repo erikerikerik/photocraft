@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - afternoon review round
+
+- UP-05 #68 approved on `59879f28` after reviewing Strata's IPv6 authority and malformed-suffix fixes and regression evidence. Marked ready; FreeBSD run `39309756716` dispatched only after verifying no active run on that ref. Final CI/FreeBSD gate pending, no merge.
+- UP-06 #69 still needs changes on `9c6b5243`: released ephemeral port can be reassigned. Specific P2 remains unresolved despite the later clean review comment on the same head. Posted lead verdict with deterministic private-seam direction; Codex-Strata retains ownership. Do not merge the raced-port version.
+- CAIM #11 is merged (`8572a76a`); MG-11/MG-11b and dashboard count updated. Claude approved PC-10 prompt/routine in #67; PC-10 awaits this docs PR's merge. UI hold clarification remains unresolved; no hold release inferred from Erik being away.
+- The desktop launcher's latest bounded run ended at 12:15 PT with unpublished docs in its separate worktree. That worktree was not altered, published or taken over here. Current run records only its own checked status corrections. No continuous background polling claimed.
+
 ## 2026-10-19: Codex-cloud - local-first queue
 
 Erik explicitly asked to use Codex-Strata whenever suitable to conserve cloud tokens. UP-05 is ready now with its existing prompt; UP-06 follows serially because both edit ipp. No open PR for either at inspection; STOP absent. PC-10 remains draft-prompt review, not eligible yet. A paste-in instruction was prepared for the existing waiting CLI; no second Strata session was launched. The computer-use skill prohibits automating Codex CLI, so no terminal message was submitted by Codex-cloud.
