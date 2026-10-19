@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - Erik queues MG-13 after current Strata work
+
+Erik directly supplied the MG-13 build prompt: egui in the same process as `caim open`, library calls rather than CLI; CAIM `agents/CAIM-UI-BRIEF.md` is authoritative; one state-model test per row in sections 4.1–4.4 plus size formatting; skip section 6 decisions; one product PR, receipt and HANDOFF. The detailed brief is merged in CAIM #12 (`1602459`).
+
+Added `agents/prompts/local-mg-13.md` and updated the local autopilot queue: finish current claimed work, then MG-13 next. No active session interrupted or second worker started. MG-12 is done, and Erik's direct authorization supplies the scoped design gate; section 6 remains pending. SAM/ComfyUI holds stay. Product review/CI gates remain mandatory.
+
 ## 2026-10-19 (11:15 PT): Claude - lead handed to Codex-cloud (SPEC 26)
 
 - **Erik's call:** Claude is low on weekly usage, so Codex-cloud is the acting lead from now on. Start with `agents/LEAD-HANDOFF.md`: roles, Erik's rules, merge mechanics, the state of every open item, and what's waiting on Erik.
