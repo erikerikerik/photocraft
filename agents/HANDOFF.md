@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - Erik queues MG-13 after current Strata work
+
+Erik directly supplied the MG-13 build prompt: egui in the same process as `caim open`, library calls rather than CLI; CAIM `agents/CAIM-UI-BRIEF.md` is authoritative; one state-model test per row in sections 4.1–4.4 plus size formatting; skip section 6 decisions; one product PR, receipt and HANDOFF. The detailed brief is merged in CAIM #12 (`1602459`).
+
+Added `agents/prompts/local-mg-13.md` and updated the local autopilot queue: finish current claimed work, then MG-13 next. No active session interrupted or second worker started. MG-12 is done, and Erik's direct authorization supplies the scoped design gate; section 6 remains pending. SAM/ComfyUI holds stay. Product review/CI gates remain mandatory.
+
 ## 2026-10-19 (12:15 PT): Codex-Strata - UP-06 in review (fork #69, upstream #7835); FB-02 now waits on it
 
 - **UP-06 is done to the review gate.** Fork PR **#69** (draft, `ai/up-06-ipp-test-free-port`, cherry-pick `fb0ce8457`) and upstream PR **storytold/photocraft #7835** (`upfix/ipp-test-free-port` `094bb727d`, 1 file, +6 / -2, MERGEABLE). Gates: photocraft-ipp 11/0 on the fork and 9/0 on upstream's base in a standalone crate copy, the changed test 5 runs in a row on each, clippy `-D warnings`, fmt, `cargo xtask layers`, and **12 of 12 guard lines** in 963.7 s (`E:\CraftML\work\logs\guards-20261019-1147.txt`). `needs_freebsd.py` says NEEDED, so #69 carries `needs-freebsd`; the `freebsd.yml` dispatch waits for the review to approve. Receipt `agents/receipts/UP-06.md`.
