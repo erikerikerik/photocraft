@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19 (07:10 PT): Claude - PC-09 and MG-11 merged
+
+- **PC-09 merged** (PR #49, `df4f3cac`) under SPEC 25. **MG-11 merged** (CAIM PR #9, `c4948903`): it was approved at the 00:15 UTC check-in, and its CI is now green (msrv passed on re-run).
+- **MG-11's 4090 step is Erik's:** with Strata stopped or idle so the card is free, run `caim cuda install --accept-note`, then the CUDA golden and the timing table (done-when 6 and 7). Auto stays on the CPU until then.
+- **Open:** PR #56 (UP-04): CI is green, and its FreeBSD run was cancelled by a re-dispatch. Re-dispatch it only when no run is in progress (SPEC 25 note).
+
 ## 2026-10-19 (07:00 PT): Claude - D18: FreeBSD aarch64 is advisory (SPEC 25)
 
 - **Erik chose D18 (a).** SPEC amendment 25 makes the x86_64 job the required FreeBSD check. The aarch64 job is reported but never blocks. It supersedes SPEC 24, and FB-01 is closed.
