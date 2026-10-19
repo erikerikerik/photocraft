@@ -68,12 +68,16 @@ pub fn short_sha(sha: &str) -> &str {
     sha.get(..12).unwrap_or(sha)
 }
 
-/// Store `record` on `layer`, replacing any record the layer already had. Only the layer a job made
+/// Store `record` on `layer`, replacing the record the layer already had. Only the layer a job made
 /// or masked gets one; nothing here looks at another layer.
+///
+/// A block under our key that does not read back as one of our records belongs to whatever program
+/// wrote it, so it stays byte for byte (AGENTS.md section 8: unknown PSD blocks are kept verbatim)
+/// and ours goes in after it.
 pub fn write(layer: &mut Layer, record: &Record) -> Result<()> {
     let json = serde_json::to_vec(record).map_err(|e| EngineError::Other(format!("could not store what made the layer: {e}")))?;
     let block = Arc::new(json);
-    match layer.psd_blocks.iter_mut().find(|(key, _)| *key == KEY) {
+    match layer.psd_blocks.iter_mut().find(|(key, data)| *key == KEY && parse(data).is_some()) {
         Some((_, slot)) => *slot = block,
         None => layer.psd_blocks.push((KEY, block)),
     }
@@ -84,8 +88,18 @@ pub fn write(layer: &mut Layer, record: &Record) -> Result<()> {
 /// ours - one another program wrote into a PSD, or a file from a newer PhotoCraft with fields this
 /// one does not know - reads as no record rather than as an error.
 pub fn read(layer: &Layer) -> Option<Record> {
-    let raw = layer.psd_blocks.iter().find(|(key, _)| *key == KEY).map(|(_, data)| data)?;
-    serde_json::from_slice(raw.as_slice()).ok()
+    layer.psd_blocks.iter().filter(|(key, _)| *key == KEY).find_map(|(_, data)| parse(data))
+}
+
+/// One block's bytes as a record, or `None` when they are not one. A PSD keeps a layer block's pad
+/// byte inside the length (`crates/io/src/psd_export.rs`), so a record that serialized to an odd
+/// number of bytes comes back with a trailing NUL; JSON never ends with one, so the pad is dropped
+/// before parsing.
+fn parse(data: &[u8]) -> Option<Record> {
+    match data.iter().rposition(|&byte| byte != 0) {
+        Some(last) => serde_json::from_slice(&data[..=last]).ok(),
+        None => None,
+    }
 }
 
 #[cfg(test)]

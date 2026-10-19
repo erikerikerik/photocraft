@@ -130,3 +130,58 @@ fn short_sha_keeps_the_first_twelve_characters() {
     assert_eq!(short_sha("58f621f00f5d"), "58f621f00f5d");
     assert_eq!(short_sha("short"), "short");
 }
+
+/// The record a PSD round trip gives back for `record`: export the document, read the file again,
+/// and take the record off the layer that came back.
+fn psd_round_trip(record: &Record) -> Option<Record> {
+    let mut s = session();
+    put(&mut s, record);
+    let doc = s.active().unwrap().doc.clone();
+    let bytes = photocraft_io::export(&doc, "x.psd", &Default::default()).unwrap().bytes;
+    let back = photocraft_io::import("x.psd", &bytes).unwrap().document;
+    back.walk().into_iter().find_map(|(_, _, layer)| read(layer))
+}
+
+#[test]
+fn a_record_survives_a_psd_round_trip_whatever_its_length() {
+    // A PSD keeps an odd-length block's pad byte inside the length, so a record that serializes to
+    // an odd number of bytes comes back with a trailing NUL. Both parities are covered on purpose.
+    let mut parities = [false; 2];
+    for version in ["epoch_244", "epoch_2444"] {
+        let record = Record { model_version: Some(version.into()), ..sample() };
+        let len = serde_json::to_vec(&record).unwrap().len();
+        parities[len % 2] = true;
+        let back = psd_round_trip(&record).unwrap_or_else(|| panic!("a record that serialized to {len} bytes is lost by a PSD round trip"));
+        assert_eq!(back, record, "a {len} byte record must survive a PSD round trip");
+    }
+    assert!(parities[0] && parities[1], "the two records must cover both parities, got {parities:?}");
+}
+
+#[test]
+fn a_psd_pad_byte_inside_the_block_does_not_hide_the_record() {
+    let mut layer = raster("Generative Fill");
+    let mut json = serde_json::to_vec(&sample()).unwrap();
+    json.push(0);
+    write(&mut layer, &sample()).unwrap();
+    let slot = layer.psd_blocks.iter_mut().find(|(key, _)| *key == KEY).unwrap();
+    slot.1 = Arc::new(json);
+    assert_eq!(read(&layer), Some(sample()), "the pad byte a PSD adds inside an odd-length block is not part of the record");
+}
+
+#[test]
+fn a_block_under_our_key_that_is_not_ours_is_kept_and_our_record_goes_beside_it() {
+    let mut layer = raster("Generative Fill");
+    let foreign = b"another program's block, not one of our records".to_vec();
+    layer.psd_blocks.push((KEY, Arc::new(foreign.clone())));
+    let want = sample();
+    write(&mut layer, &want).unwrap();
+    assert_eq!(read(&layer).as_ref(), Some(&want), "our record is the one that reads back");
+    let ours = |l: &Layer| l.psd_blocks.iter().filter(|(key, _)| *key == KEY).filter(|(_, d)| parse(d).is_some()).count();
+    assert_eq!(ours(&layer), 1, "one record per layer, beside the foreign block");
+    assert!(layer.psd_blocks.iter().any(|(_, d)| d.as_slice() == foreign.as_slice()), "the other program's bytes stay verbatim");
+    let newer = Record { model: "lama-fill-v2".into(), ..sample() };
+    write(&mut layer, &newer).unwrap();
+    assert_eq!(layer.psd_blocks.iter().filter(|(key, _)| *key == KEY).count(), 2, "writing again replaces our record, it does not add a third block");
+    assert_eq!(read(&layer).as_ref(), Some(&newer));
+    assert!(layer.psd_blocks.iter().any(|(_, d)| d.as_slice() == foreign.as_slice()));
+}
