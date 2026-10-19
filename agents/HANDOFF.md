@@ -1,5 +1,33 @@
 # HANDOFF
 
+## 2026-10-19 (07:10 PT): Claude - PC-09 and MG-11 merged
+
+- **PC-09 merged** (PR #49, `df4f3cac`) under SPEC 25. **MG-11 merged** (CAIM PR #9, `c4948903`): it was approved at the 00:15 UTC check-in, and its CI is now green (msrv passed on re-run).
+- **MG-11's 4090 step is Erik's:** with Strata stopped or idle so the card is free, run `caim cuda install --accept-note`, then the CUDA golden and the timing table (done-when 6 and 7). Auto stays on the CPU until then.
+- **Open:** PR #56 (UP-04): CI is green, and its FreeBSD run was cancelled by a re-dispatch. Re-dispatch it only when no run is in progress (SPEC 25 note).
+
+## 2026-10-19 (07:00 PT): Claude - D18: FreeBSD aarch64 is advisory (SPEC 25)
+
+- **Erik chose D18 (a).** SPEC amendment 25 makes the x86_64 job the required FreeBSD check. The aarch64 job is reported but never blocks. It supersedes SPEC 24, and FB-01 is closed.
+- **`agents/tools/freebsd_ok.py` rewritten for SPEC 25:** PASS needs every non-aarch64 job completed and green; aarch64 is printed as "advisory". Tested on runs 39180123752 (PASS), 39171575189 (FAIL: x86_64 red), 39110665751 (PASS), 39084263728 (old single job, PASS), 39043022609 (cancelled, FAIL) and a bad id (exit 2).
+- **Never dispatch `freebsd.yml` on a ref whose run is still in progress:** the new run cancels it (now in the autopilot prompt and SPEC 25).
+- **PC-09 (PR #49)** merges next under SPEC 25 (run 39180123752 PASS).
+
+
+## 2026-10-19 (02:40 PT): Codex-Strata (autopilot) - RS-02 is merged; the FreeBSD gate now fails on `main` too
+
+- **RS-02 is `done`:** fork PR #57 merged as a merge commit at 09:19:43Z as `f2bb906c`. Claude approved `a678a3b8` as the independent reviewer (04:18:43Z, "APPROVE", one non-blocking nit) and merged `origin/main` into the branch as `d6b29ec6` (HANDOFF conflict only; the diff against `main` is still the PR's four `agents/` files), so the approval carried across a main-only merge - the SY-03 precedent. Docs only: `agents/tools/needs_freebsd.py` says NOT NEEDED (exit 0), so it merged on approval alone (SPEC 17 step 8). Codex-cloud's two rounds are spent and all six of its P2s were fixed. **Erik's D7 choice is ready to make:** the research doc recommends shipping no learned fill and, later, training a small one on PD12M; the D7 row itself is untouched.
+- **D18 blocks every FreeBSD-gated merge, not just PC-09.** A FreeBSD run dispatched on `main` itself (`c3033282`, run 39196733051) ends the same way as PC-09's run 39180123752: x86_64 success, aarch64 cancelled at the 300-minute job cap, `agents/tools/freebsd_ok.py` FAIL (exit 1). So the gate fails on `main`, not on our branches. Upstream `storytold/craft-common-actions` `1f5d5169` (its PR #24, Oct 18 17:15Z) replaced the rustup step with `pkg install -y rust`, which is why the leg now really builds instead of stopping at the installer - **FB-01's premise is fixed upstream, so FB-01's row is stale.** It is Claude's watch row, so it is left for Claude; D18 is the live decision.
+- **UP-04 (#56) FreeBSD attempt 1 failed x86_64 on one upstream test only:** `background_redraw::tests::an_edit_during_a_redraw_is_not_overwritten_by_blocks_drawn_before_it`, panic at `crates/ui-egui/src/background_redraw_tests.rs:137` ("the redraw goes on"), 2997 passed / 1 failed, and our diff is `crates/ipp` only. That test passed in the `main` run above, so it is a flake (FB-02-adjacent, not a new FB task). `gh run rerun 39192522261 --failed` at 08:04Z re-ran **both** legs - a cancelled job counts as failed - so that attempt's aarch64 leg hits its 5 h cap at ~13:04Z whatever happens. #56 cannot PASS `freebsd_ok.py` until D18 is decided either.
+- **Nightly:** the Oct 19 schedule run on `main` is 39218464212 (started 07:50Z). Its x86_64 leg got past build and test into the package step; its aarch64 leg is still compiling and will be cancelled at the cap, so it will FAIL like the two above. The last PASSing nightly is still 39106981351 (Oct 18, aarch64 excused under SPEC 24).
+- **Housekeeping:** my docs PR #59 (an FB-03 row for this same timeout) was closed as a duplicate of Claude's D18 (#60); the extra detail is in this entry instead. #49 (PC-09) and #56 (UP-04) are approved, mergeable and green apart from the FreeBSD gate, so both merge as soon as Erik picks D18 (a) or (c). UP-05 and UP-06 stay queued behind #56 because they touch `crates/ipp` too.
+## 2026-10-19 (23:05 PT Oct 18): Claude - PC-09 waits on D18 (FreeBSD aarch64 can't finish)
+
+- **PC-09 (PR #49, head `badf790b`) isn't merged.** Codex-cloud approved it, all CI is green, and FreeBSD x86_64 passed in run 39180123752 (1 h 28 m). The aarch64 job no longer fails at the Rust installer: it builds for real under QEMU and was cancelled at the job's 5 h limit. SPEC 24 doesn't cover a timeout, so Claude didn't merge.
+- **D18 (Erik):** make aarch64 advisory (recommended), keep it required, or excuse only timeouts. Until then, every FreeBSD-NEEDED merge (syncs, `upfix/*`, `crates/ai-client`) waits. Merges that don't need FreeBSD carry on as normal.
+- Claude's mistake: a fresh dispatch at 17:17 PT cancelled the earlier run's aarch64 job after 2 h (the workflow cancels in-progress runs on the same ref). Don't dispatch FreeBSD on a ref whose run is still in progress.
+
+
 ## 2026-10-18 (20:05 PT): Codex-Strata (autopilot) - PC-11 is merged (`0f99611a`); UP-04 is approved and in final CI
 
 - **PC-11 is `done`:** fork PR #54 merged as a merge commit at 02:37Z as `0f99611a`. Codex-cloud's round-2 review (comment 6257858866, on `49437bd4b9`) found nothing - "Didn't find any major issues. :+1:" - after `bd5f171b` fixed its P1 (the `pcai` block had to survive the PSD pad byte) and P2. Every check is green on the final head `cd8f67cf`, which only merges `origin/main`; `needs_freebsd.py` says NOT NEEDED, so no FreeBSD run was needed. The code is `crates/engine/src/ai_provenance.rs` (one `pcai` tagged block inside `Layer::psd_blocks`, so no document-format change) and `crates/ui-egui/src/ai_props_ui.rs` (the read-only "Made with" block), plus 3 new labels in all 20 catalogs.
@@ -17,6 +45,17 @@
 - **Erik's click (unchanged):** the upstream PR is still not open - the token cannot open PRs on `storytold/photocraft` (CN-00). Title, body and compare link are in `agents/receipts/UP-04.md` under "For Erik", now written for the three-commit head.
 - **Other threads:** PC-11 #54 conflicted with main after UP-03 merged; resolved in `cd8f67cf` (only `agents/HANDOFF.md` needed a hand decision - main's UP-03 entry first, then PC-11's two) and pushed, so CI run 39188842461 is going again; Codex-cloud's round 2 had found nothing, which the repo treats as approval. PC-09 #49 still waits on FreeBSD run 39180123752. MG-11 (CAIM #9) stays parked on Erik's hardware: free the 4090, `caim cuda install --accept-note`, then the three card goldens.
 - **Next is UP-05**, the same file (`crates/ipp/src/lib.rs:119`, `Endpoint::parse` and IPv6 literals) - not started until UP-04 merges or parks.
+
+## 2026-10-18 (19:45 PT): Codex-Strata (autopilot) - RS-02 is in review: there is no clean learned fill to adopt
+
+- **PARKED: #57 waits on Erik, not on work.** Two review rounds are used up. Round 2 (Codex-cloud, 02:50Z, on `ab81ef7c`) left 2 P2s and both are fixed in the next commit: the AOT row no longer calls the source checkpoint GPL-3.0 (the repository is GPL-3.0, but the `beta-0.3` release publishes `inpainting.ckpt` with no terms of its own, so that licence stays unclear), and the summary lines no longer sort AOT-GAN or Clean Diffusion into the permissive-weights / clean-data groups. Docs only, so the choice is Erik's: merge #57 as it stands, or ask Codex-cloud for a third look.
+- **RS-02 is `review`**, fork PR #57 (`ai/rs-02-clean-fill`, research only, receipt `agents/receipts/RS-02.md`). The deliverable is `agents/research/RS-02-clean-fill.md`, the first file in that folder. Docs only, so `needs_freebsd.py` says NOT NEEDED (exit 0) and it can merge on approval alone.
+- **The finding:** no inpainting / object-removal model is clean on **both** halves (permissive weights *and* commercially licensed training images). The small ones either fail the data half or have an unresolved weights licence: LaMa (Apache-2.0 weights, trained on Places365 and CelebA-HQ - CelebA says "The CelebA dataset is available for non-commercial research purposes only."), AOT-GAN (MIT **for the conversion only** - the card says "Review the upstream project and source checkpoint terms", and the source checkpoint `inpainting.ckpt` is published by the GPL-3.0 `zyddnys/manga-image-translator` releases page with no terms of its own, so its licence is unclear; 5,679,244 params, 22.7 MB safetensors, training data unstated), MI-GAN-512 (MIT, 16.3 MB fp16 tflite, Places2 in the name). The models with clean-data claims are all text-to-image: CommonCanvas (`cc-by-sa-4.0` weights - share-alike, outside SPEC 9's allow-list), Clean Diffusion (code Apache-2.0, but the released checkpoint `aipicasso/clean-diffusion-2-0-poc` is `openrail++` and its own "Training Images" section is "TBA"), and Public Diffusion - Spawning's model, trained "only using images marked as public domain or with a CC0, no-rights-reserved, license", real but with no weights published (nothing under `Spawning` in the HF model API, no GitHub repo, `publicdiffusion.org` does not resolve).
+- **Recommendation for D7:** ship **no learned fill** for the "Ready for other people" stage - PhotoCraft's classical Content-Aware Fill is clean by construction, offline, and already shipped - and open a scoped follow-up to train a small (5-20 M parameter, 16-50 MB) fill model on **PD12M** (`cdla-permissive-2.0`, "consists of entirely public domain and CC0 licensed images"), the only large corpus found that is clean on both halves. LaMa's *code* is Apache-2.0, so the architecture can be retrained without touching its weights or its data. Do not adopt FLUX.1-Fill (non-commercial licence, 11,902,391,360 params), CommonCanvas weights (share-alike) or any SD/SDXL inpainter (LAION-5B: "a large-scale dataset for research purposes", "The images are under their copyright").
+- **Codex-cloud's review of #57 (02:40Z) left 4 P2s, all about over-claiming, and all four were right:** Clean Diffusion and the AOT-GAN conversion are now **unclear** rather than clean; the Public Diffusion row is rewritten around Spawning's own words ("releasing an open-weight model into the commons next year", Dec 2024) instead of a 404 on `BorealisAI/public-diffusion`, which was the wrong organisation; and the LaMa sentence is now our policy line, not a claim that the weights are legal even inside a non-commercial product. Logs `rs02-batch12.txt` and `rs02-batch13.txt` carry the new sources.
+- **Marked unclear rather than guessed:** Places365 / Places2 dataset terms - `places2.csail.mit.edu/license.html` is **404**, the download page only frames the legacy data as "for research purposes", and the README says "The copyright of all the images belongs to the image owners". `stabilityai/PDIP` is gated (401) and `FLUX.1-Fill-dev`'s card is gated too: both are reported, not accepted, because reading them needs an account (the prompt's stop condition).
+- **Erik's D7 choice is now ready to make:** (a) no learned fill, (b) train a small fill model on PD12M, or (c) provider-based generative fill (upstream #2878's pattern - the user's own API key), which moves the data question to the provider's terms. Nothing was downloaded and no catalog entry changed. If (b), it needs a new task row plus a training budget and a golden test.
+- **Other threads:** UP-04 #56 is **approved** - Codex-cloud's third review (02:28Z) found nothing on `6f5b6d23`; it is ready, its CI is running and FreeBSD run 39190558870 is going. PC-11 #54 CI is still going on `cd8f67cf`. PC-09 #49 FreeBSD x86_64 is green, aarch64 still running (run 39180123752). MG-11 (CAIM PR #9) stays parked on Erik's hardware.
 
 ## 2026-10-18 (19:25 PT): Codex-Strata (autopilot) - UP-04 review round 1 is fixed; fork PR #56 still needs Erik's upstream click
 
@@ -85,6 +124,31 @@
 - **For Erik:** drag `E:\CraftML\work\shots\7241-before.png` and `7241-after.png` into a comment on upstream #7241. The text is in the UP-02 receipt. Upstream CI on our three PRs still waits for a maintainer to approve the runs.
 - **PC-09 (PR #49):** Codex-cloud approved round 1 (`1717af9c`). Autopilot marks it ready, then CI and FreeBSD run.
 
+## 2026-10-18 (21:10 UTC): Codex-Strata (autopilot) - PC-09 client masks; UP-02b round 1
+
+- **PC-09 is `review`; fork PR #49** (`ai/pc-09-client-masks`, receipt `agents/receipts/PC-09.md`).
+  `crates/ai-client` now speaks protocol v1's mask half: `ready` and `output` from `/v1/tasks`, an
+  8-bit grayscale `result.png` at the sent size for a `subject_mask` job, and the amendment 18
+  provenance fields into `AiProvenance`; the fill path is byte for byte what amendment 11 left, and an
+  M1-shaped manager is answered exactly as before. 49 ai-client tests (9 new), engine `ai` 182 passed,
+  clippy `-D warnings` clean, `cargo xtask layers` OK (32 crates), fmt clean, 11 of 11 guard lines.
+  No engine, CAIM, UI or document-format change.
+- **Round 1 on #49** (Codex-cloud, one P2 at `crates/ai-client/src/protocol.rs:342`): a
+  `subject_mask` entry that leaves out `output` was offered, but amendment 18 says a missing
+  `output` means `image`, so such a manager has promised an image and the result check would reject
+  it. `parse_tasks` now resolves that default before comparing, and the test covers missing,
+  wrong-typed and fill-shaped cases. Second and last review round on this PR.
+- **UP-02b round 1 pushed to #47** (`68b3f2a6`): Codex-cloud's P2 was right - the receipt claimed a
+  Linux build of upstream #7240 that a Windows PC cannot show, because everything #7240 changes sits
+  behind `cfg(target_os = "linux")`. Narrowed to what was verified, and the Linux result is now an
+  open item: upstream's Actions run for our three PRs is `action_required` until a maintainer approves
+  it. `84df1468` on `upfix/env-launch-options` (CodeRabbit on #7242) moves the `mut` on
+  `launch_options` inside the non-macOS block, so macOS builds stop warning; no behaviour change.
+- **MG-12 done merged as #46** (`87915223`). **PR #48 is Claude's** (CAIM-03 done, the autopilot order
+  line) - not mine to review.
+- **Erik still owes two things:** drag `E:\CraftML\work\shots\7241-before.png` and
+  `7241-after.png` into a #7241 comment, and get someone with write access upstream to approve the
+  Actions run on #7240 so its Linux build is actually checked.
 ## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
 
 - **UP-02b is `review`; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
@@ -120,7 +184,6 @@
 - **Machine note:** the real cargo home is read-only to the sandbox and git https needs
   `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
   settings are in the UP-02 receipt's Oct 18 follow-up.
-
 ## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
 
 - **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.

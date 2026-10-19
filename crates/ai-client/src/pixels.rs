@@ -196,7 +196,38 @@ pub fn decode_image(png_bytes: &[u8], format: PixelFormat, width: u32, height: u
     Ok(to_floats(&raw, depth))
 }
 
-/// PNG samples are big-endian and unsigned; they normalise to 0..=1 exactly as `photocraft-color` does.
+/// `result.png` for a mask task (amendment 18): 8-bit grayscale at the size that was sent, where
+/// 255 is subject, 0 is background and between is a soft edge. Another size, another colour type
+/// or 16 bits is an error, because the coverage cannot be guessed from it.
+pub fn decode_mask(png_bytes: &[u8], width: u32, height: u32) -> Result<Vec<f32>, AiError> {
+    check_size(width, height)?;
+    let raw_len = checked_byte_len(expected_samples(width, height, 1)?, 8)?;
+    let mut decoder = Decoder::new_with_limits(Cursor::new(png_bytes), Limits { bytes: raw_len.saturating_add(raw_len / 4).saturating_add(1024) });
+    decoder.set_ignore_text_chunk(true);
+    let header = decoder.read_header_info().map_err(decode_failed)?;
+    if header.width != width || header.height != height {
+        return Err(AiError::Other("Craft AI Manager's mask is not the size PhotoCraft sent.".into()));
+    }
+    if header.color_type != ColorType::Grayscale {
+        return Err(AiError::Other("Craft AI Manager's mask is not a grayscale image.".into()));
+    }
+    if header.bit_depth != BitDepth::Eight {
+        return Err(AiError::Other("Craft AI Manager's mask is not 8-bit.".into()));
+    }
+    let mut reader = decoder.read_info().map_err(decode_failed)?;
+    if reader.output_color_type() != (ColorType::Grayscale, BitDepth::Eight) {
+        return Err(AiError::Other("Craft AI Manager's mask is not the 8-bit grayscale image PhotoCraft asked for.".into()));
+    }
+    if reader.output_buffer_size() != Some(raw_len) {
+        return Err(AiError::Other("Craft AI Manager's mask is not the size PhotoCraft sent.".into()));
+    }
+    let mut raw = vec![0u8; raw_len];
+    reader.next_frame(&mut raw).map_err(decode_failed)?;
+    // 0..=255 to 0..=1: the same normalisation an 8-bit image sample gets.
+    Ok(to_floats(&raw, 8))
+}
+
+/// PNG samples are big-endian and unsigned; they normalise to 0..=1 exactly as `photocraft-color` does./// PNG samples are big-endian and unsigned; they normalise to 0..=1 exactly as `photocraft-color` does.
 fn to_floats(raw: &[u8], depth: u8) -> Vec<f32> {
     if depth == 8 {
         raw.iter().map(|byte| f32::from(*byte) / 255.0).collect()
@@ -211,5 +242,11 @@ pub fn result_body_cap(width: u32, height: u32, format: PixelFormat) -> Result<u
     let channels = channels(format)?;
     let depth = bit_depth(format);
     let raw_len = checked_byte_len(expected_samples(width, height, channels)?, depth)?;
+    Ok(raw_len.saturating_add(raw_len / 4).saturating_add(64 * 1024).min(MAX_PNG_BYTES))
+}
+/// The largest `result.png` body worth reading for a mask task at this size: one byte a pixel,
+/// with the same compression headroom an image result gets, never over the protocol's 1 GiB.
+pub fn mask_body_cap(width: u32, height: u32) -> Result<usize, AiError> {
+    let raw_len = checked_byte_len(expected_samples(width, height, 1)?, 8)?;
     Ok(raw_len.saturating_add(raw_len / 4).saturating_add(64 * 1024).min(MAX_PNG_BYTES))
 }
