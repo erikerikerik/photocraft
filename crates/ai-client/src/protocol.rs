@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use photocraft_engine::ai::{AiError, AiJobState, AiRequest, AiTask};
+use photocraft_engine::ai::{AiError, AiJobState, AiProvenance, AiRequest, AiTask};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -12,6 +12,8 @@ use crate::http::MAX_JSON_BODY_BYTES;
 
 /// The provider the client asks for; the manager picks the backend.
 const PROVIDER_AUTO: &str = "auto";
+/// Amendment 18: the answer shape a `GET /v1/tasks` entry means when it leaves out `output`.
+const OUTPUT_IMAGE: &str = "image";
 /// Job ids are opaque, but they are put into a URL path, so they are checked before use.
 const MAX_JOB_ID_BYTES: usize = 512;
 const MAX_PROMPT_BYTES: usize = 4096;
@@ -231,7 +233,16 @@ pub fn parse_state(body: &[u8]) -> Result<AiJobState, AiError> {
     }
 }
 
-/// Where a finished job ran: model, device, provider, timing, and the size it claims to be.
+/// What `result.png` holds: `Image` is the request's own format (amendment 11), `Mask` is 8-bit
+/// grayscale at the size that was sent (amendment 18).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ResultKind {
+    Image,
+    Mask,
+}
+
+/// Where a finished job ran: model, device, provider, timing, the size it claims to be, the kind of
+/// answer it says it sent, and the amendment 18 provenance fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Provenance {
     pub model: String,
@@ -239,12 +250,21 @@ pub struct Provenance {
     pub provider: String,
     pub elapsed_ms: u64,
     pub image_size: Option<[u32; 2]>,
+    /// `"image"` or `"mask"` as the manager wrote it; `None` when the field is missing, which is
+    /// amendment 11's image answer.
+    pub kind: Option<String>,
+    /// The amendment 18 fields. Every one is optional, and a value of the wrong JSON type is
+    /// ignored rather than fatal: provenance never fails a finished job.
+    pub extra: AiProvenance,
 }
 
 /// `GET /v1/jobs/{id}/result`. Missing fields say "unknown" rather than failing a finished job.
 pub fn parse_provenance(body: &[u8]) -> Result<Provenance, AiError> {
     let value = json_body(body, "a job result")?;
     let text = |key: &str| value.get(key).and_then(Value::as_str).map(trim_sentence).filter(|text| !text.is_empty()).unwrap_or_else(|| "unknown".to_string());
+    // An optional field: missing, empty, or a value of the wrong JSON type all mean "not said".
+    let optional = |key: &str| value.get(key).and_then(Value::as_str).map(trim_sentence).filter(|text| !text.is_empty());
+    let number = |key: &str| value.get(key).and_then(Value::as_u64);
     let image_size = match value.get("image_size") {
         Some(Value::Array(pair)) if pair.len() == 2 => {
             let width = pair.first().and_then(Value::as_u64).and_then(|v| u32::try_from(v).ok());
@@ -260,21 +280,74 @@ pub fn parse_provenance(body: &[u8]) -> Result<Provenance, AiError> {
         model: text("model"),
         device: text("device"),
         provider: text("provider"),
-        elapsed_ms: value.get("elapsed_ms").and_then(Value::as_u64).unwrap_or(0),
+        elapsed_ms: number("elapsed_ms").unwrap_or(0),
         image_size,
+        kind: optional("kind"),
+        extra: AiProvenance {
+            model_version: optional("model_version"),
+            model_sha256: optional("model_sha256"),
+            device_requested: optional("device_requested"),
+            device_name: optional("device_name"),
+            // Amendment 18 lists five backend-neutral reasons; any other text is still kept,
+            // because it is only ever shown to a human in a log or a Details pane.
+            fallback_reason: optional("fallback_reason"),
+            diagnostics: optional("diagnostics"),
+            load_ms: number("load_ms"),
+            run_ms: number("run_ms"),
+        },
     })
 }
 
-/// `GET /v1/tasks`: the tasks this manager offers now. Unknown ids are skipped, not fatal.
+/// The kind of `result.png` this job must have, checked against what the manager says it sent. A
+/// fill keeps amendment 11's answer, where a missing `kind` means image; a mask task needs the
+/// amendment 18 `"kind": "mask"`, because an 8-bit grayscale mask is not an answer to a fill and
+/// an image is not an answer to a mask.
+pub fn result_kind(kind: Option<&str>, task: AiTask) -> Result<ResultKind, AiError> {
+    let wanted = if task == AiTask::SubjectMask { ResultKind::Mask } else { ResultKind::Image };
+    match (kind, wanted) {
+        (Some("mask"), ResultKind::Mask) => Ok(ResultKind::Mask),
+        (Some("image") | None, ResultKind::Image) => Ok(ResultKind::Image),
+        (None, ResultKind::Mask) => Err(AiError::Other("Craft AI Manager did not say what kind of result it sent.".into())),
+        (Some(other), _) => Err(AiError::Other(format!("Craft AI Manager answered a {other} result to a {} request.", task.id()))),
+    }
+}
+
+/// The kind of answer this build expects for `task`, in amendment 18's `output` words.
+const fn output_of(task: AiTask) -> &'static str {
+    match task {
+        AiTask::FillMaskedArea => "image",
+        AiTask::SubjectMask => "mask",
+    }
+}
+
+/// `GET /v1/tasks`: the tasks this manager offers now that this build can speak. An unknown id, a
+/// task that is not ready, and a task whose answer is not the kind this build expects for that id
+/// are skipped, not fatal. `"ready"` (missing = `true`) means the model is installed and
+/// acknowledged; `"model"` is informational only, because PhotoCraft asks for a task and the
+/// manager alone maps tasks to models.
 pub fn parse_tasks(body: &[u8]) -> Result<Vec<AiTask>, AiError> {
     let value = json_body(body, "a task list")?;
     let tasks = value.get("tasks").and_then(Value::as_array).ok_or_else(|| AiError::Other("Craft AI Manager did not send its list of tasks.".into()))?;
     let mut out: Vec<AiTask> = Vec::new();
     for task in tasks {
         let id = task.get("id").and_then(Value::as_str).unwrap_or_default();
-        if let Ok(parsed) = serde_json::from_value::<AiTask>(Value::String(id.to_string()))
-            && !out.contains(&parsed)
-        {
+        let Ok(parsed) = serde_json::from_value::<AiTask>(Value::String(id.to_string())) else {
+            continue;
+        };
+        // A missing or non-boolean `ready` is the M1 answer: the task is on offer.
+        if task.get("ready").and_then(Value::as_bool) == Some(false) {
+            continue;
+        }
+        // Amendment 18: an entry that leaves out `output` means `image`, so the default is
+        // resolved before the comparison rather than treated as silence. An `output` that
+        // contradicts the id describes an answer this build could not read for that id, so the
+        // task is not offered: `subject_mask` with no `output` is a manager promising an image,
+        // and offering it would submit a mask job whose result the check below rejects.
+        let output = task.get("output").and_then(Value::as_str).unwrap_or(OUTPUT_IMAGE);
+        if output != output_of(parsed) {
+            continue;
+        }
+        if !out.contains(&parsed) {
             out.push(parsed);
         }
     }

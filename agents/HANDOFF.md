@@ -92,6 +92,31 @@
 - **For Erik:** drag `E:\CraftML\work\shots\7241-before.png` and `7241-after.png` into a comment on upstream #7241. The text is in the UP-02 receipt. Upstream CI on our three PRs still waits for a maintainer to approve the runs.
 - **PC-09 (PR #49):** Codex-cloud approved round 1 (`1717af9c`). Autopilot marks it ready, then CI and FreeBSD run.
 
+## 2026-10-18 (21:10 UTC): Codex-Strata (autopilot) - PC-09 client masks; UP-02b round 1
+
+- **PC-09 is `review`; fork PR #49** (`ai/pc-09-client-masks`, receipt `agents/receipts/PC-09.md`).
+  `crates/ai-client` now speaks protocol v1's mask half: `ready` and `output` from `/v1/tasks`, an
+  8-bit grayscale `result.png` at the sent size for a `subject_mask` job, and the amendment 18
+  provenance fields into `AiProvenance`; the fill path is byte for byte what amendment 11 left, and an
+  M1-shaped manager is answered exactly as before. 49 ai-client tests (9 new), engine `ai` 182 passed,
+  clippy `-D warnings` clean, `cargo xtask layers` OK (32 crates), fmt clean, 11 of 11 guard lines.
+  No engine, CAIM, UI or document-format change.
+- **Round 1 on #49** (Codex-cloud, one P2 at `crates/ai-client/src/protocol.rs:342`): a
+  `subject_mask` entry that leaves out `output` was offered, but amendment 18 says a missing
+  `output` means `image`, so such a manager has promised an image and the result check would reject
+  it. `parse_tasks` now resolves that default before comparing, and the test covers missing,
+  wrong-typed and fill-shaped cases. Second and last review round on this PR.
+- **UP-02b round 1 pushed to #47** (`68b3f2a6`): Codex-cloud's P2 was right - the receipt claimed a
+  Linux build of upstream #7240 that a Windows PC cannot show, because everything #7240 changes sits
+  behind `cfg(target_os = "linux")`. Narrowed to what was verified, and the Linux result is now an
+  open item: upstream's Actions run for our three PRs is `action_required` until a maintainer approves
+  it. `84df1468` on `upfix/env-launch-options` (CodeRabbit on #7242) moves the `mut` on
+  `launch_options` inside the non-macOS block, so macOS builds stop warning; no behaviour change.
+- **MG-12 done merged as #46** (`87915223`). **PR #48 is Claude's** (CAIM-03 done, the autopilot order
+  line) - not mine to review.
+- **Erik still owes two things:** drag `E:\CraftML\work\shots\7241-before.png` and
+  `7241-after.png` into a #7241 comment, and get someone with write access upstream to approve the
+  Actions run on #7240 so its Linux build is actually checked.
 ## 2026-10-18 (20:40 UTC): Codex-Strata (autopilot) - UP-02b: #7242 builds on today's main again
 
 - **UP-02b is `review`; fork docs PR #47** (`ai/up-02b-status`). `upfix/env-launch-options`, the head of
@@ -127,7 +152,6 @@
 - **Machine note:** the real cargo home is read-only to the sandbox and git https needs
   `http.sslBackend=openssl`; pushes work through a `GIT_ASKPASS` that calls `gh auth token`. The exact
   settings are in the UP-02 receipt's Oct 18 follow-up.
-
 ## 2026-10-18 (20:30 UTC): Claude (check-in) - MG-12 merged
 
 - **MG-12 merged** as CAIM `b4306981` (CAIM PR #7). Claude reviewed round 4 (D17 option 1) and approved it: the launch lock is never unlinked, so every run locks the same inode, and the new waiter test covers the finding. CAIM CI was green on `ec931d3`. Non-blocking note on the PR: on Windows, `create_new` writes the record before `try_lock`, so in a very small window the creator can report `Failed` instead of waiting. Only one manager still starts.

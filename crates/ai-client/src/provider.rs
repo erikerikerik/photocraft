@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use photocraft_color::PixelFormat;
-use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvenance, AiProvider, AiRequest, AiResult, AiTask};
+use photocraft_engine::ai::{AiError, AiJobId, AiJobState, AiOutput, AiProvider, AiRequest, AiResult, AiTask};
 use photocraft_geom::{Rect, Size};
 
 use crate::endpoint::{self, Endpoint};
@@ -24,6 +24,8 @@ const MAX_TRACKED_JOBS: usize = 16;
 #[derive(Clone, Debug)]
 struct JobRecord {
     endpoint: Endpoint,
+    /// Which task the job was for: it decides what kind of answer may come back.
+    task: AiTask,
     window: Rect,
     /// The size actually sent, which for a mask task is smaller than the window (amendment 18).
     size: Size,
@@ -152,7 +154,7 @@ impl AiProvider for CaimProvider {
         let reply = self.call(&endpoint, "POST", "/v1/jobs", Some(&content_type), &body, http::MAX_JSON_BODY_BYTES)?;
         let id = protocol::parse_job_id(&reply.body)?;
         let sequence = self.next_sequence.fetch_add(1, Ordering::Relaxed);
-        self.remember(&id, JobRecord { endpoint, window: req.window, size, format: req.format, samples: req.pixels.len(), sequence });
+        self.remember(&id, JobRecord { endpoint, task: req.task, window: req.window, size, format: req.format, samples: req.pixels.len(), sequence });
         Ok(AiJobId::new(id))
     }
 
@@ -176,25 +178,41 @@ impl AiProvider for CaimProvider {
         {
             return Err(AiError::Other("Craft AI Manager says its result is a different size from the area PhotoCraft sent.".into()));
         }
-        let cap = pixels::result_body_cap(size.width, size.height, record.format)?;
+        // What the answer must be is decided by the task we submitted, then checked against what
+        // the manager says it sent (amendment 18): a mask for a fill, or an image for a mask, is
+        // not an answer, and a mask task with no `kind` is not one either.
+        let kind = protocol::result_kind(provenance.kind.as_deref(), record.task)?;
+        let cap = match kind {
+            protocol::ResultKind::Image => pixels::result_body_cap(size.width, size.height, record.format)?,
+            protocol::ResultKind::Mask => pixels::mask_body_cap(size.width, size.height)?,
+        };
         let reply = self.get(&record.endpoint, &format!("{base}/result.png"), cap)?;
         if !reply.content_type.unwrap_or_default().starts_with("image/png") {
             return Err(AiError::Other("Craft AI Manager's result image is not a PNG.".into()));
         }
-        let pixels = pixels::decode_image(&reply.body, record.format, size.width, size.height)?;
-        if pixels.len() != record.samples {
-            return Err(AiError::Other("Craft AI Manager's result image does not have the samples PhotoCraft asked for.".into()));
-        }
+        let output = match kind {
+            // Fill: amendment 11's answer, checked exactly as before.
+            protocol::ResultKind::Image => {
+                let pixels = pixels::decode_image(&reply.body, record.format, size.width, size.height)?;
+                if pixels.len() != record.samples {
+                    return Err(AiError::Other("Craft AI Manager's result image does not have the samples PhotoCraft asked for.".into()));
+                }
+                AiOutput::Image { pixels, format: record.format }
+            }
+            // Mask: 8-bit grayscale at the size that was sent, one value in 0..=1 per pixel. The
+            // engine stretches it to the document area; the client does not guess at that.
+            protocol::ResultKind::Mask => AiOutput::Mask { coverage: pixels::decode_mask(&reply.body, size.width, size.height)?, size },
+        };
         Ok(AiResult {
             window: record.window,
-            // Milestone 1 has one task, and its answer is an image. The mask path (amendment
-            // 18) arrives with PC-09, where result.png gains a mask reader.
-            output: AiOutput::Image { pixels, format: record.format },
+            output,
             model: provenance.model,
             device: provenance.device,
             provider: provenance.provider,
             elapsed_ms: provenance.elapsed_ms,
-            provenance: AiProvenance::default(),
+            // The amendment 18 fields; empty for an M1-shaped manager, which is unknown rather
+            // than a problem.
+            provenance: provenance.extra,
         })
     }
 
