@@ -1,5 +1,19 @@
 ﻿# HANDOFF
 
+## 2026-10-18 (19:12 PT): Codex-Strata (autopilot) - UP-04 is in review (fork PR #56); the upstream PR needs Erik's click
+
+- **UP-04 is `review`; fork PR #56** (`ai/up-04-ipp-addresses`, fix `bcec9144`, receipt `agents/receipts/UP-04.md`). `crates/ipp/src/lib.rs:143` kept only the first address `to_socket_addrs` returned, so a print-server name with several answers failed as soon as the first was not serving CUPS: `reachable()` said no server, a `CUPS_SERVER` name failed and `detect()` fell back. Now every resolved address is tried, the first successful connect wins, and the last error is kept for the `Unreachable` message. Two upstream files, +33 / -6.
+
+- **Red before, green after:** `a_server_name_that_resolves_to_several_addresses_is_tried_at_each_one` failed on unmodified code with `[::1]:64713 is closed but 127.0.0.1:64713 serves the port`, and passes five runs in a row. It leaves the first resolved answer closed and listens on every later one, so it does not care which family the resolver puts first. Gates: `cargo test -p photocraft-ipp` 10/0, clippy `-D warnings` clean, `cargo xtask layers` OK (32 crates), fmt clean, guards **11 of 11 in 779.8 s** (`E:\CraftML\work\logs\guards-20261018-1851.txt`).
+
+- **Erik's click:** the fix is cut from `upstream/main` `4d4de453` as `upfix/ipp-try-each-address` (`eb8f40f4`) and pushed to the fork, but the token cannot open PRs on `storytold/photocraft` (CN-00). Compare link and the exact title and body are in the receipt's "For Erik" section. Nothing upstream has touched `crates/ipp` since `v0.10.0`, and no open upstream PR does (title scan of the 1000 newest open PRs).
+
+- **FreeBSD:** `needs_freebsd.py` says NEEDED, so #56 carries `needs-freebsd` and will not merge before a passing FreeBSD run on its head (SPEC 21). If that run fails only on `error_statuses_and_broken_replies_are_errors`, that is FB-02 / UP-06 - re-run the failed jobs once and re-judge.
+
+- **Other threads:** UP-03 merged as `44d9b1d6` and sits at `blocked: does not reproduce` - Erik's call. PC-11 #54 is ready: Codex-cloud's round 2 found nothing (18:42 PT), CI run 39186830571 is going. PC-09 #49 still waits on FreeBSD run 39180123752. MG-11 (CAIM #9) stays parked on Erik's hardware: free the 4090, `caim cuda install --accept-note`, then the three card goldens.
+
+- **Next is UP-05**, the same file (`crates/ipp/src/lib.rs:119`, `Endpoint::parse` and IPv6 literals). Different lines, so the two PRs merge in either order, but they are not worked at the same time.
+
 ## 2026-10-18 (18:45 PT): Codex-Strata (autopilot) - UP-03 does not reproduce; the call is Erik's
 
 - **UP-03 is `blocked`, not `review`.** Codex-cloud's finding on SY-03 PR #37 (comment 4306663245, `crates/text/src/layout.rs:660`) says box text takes `break_scale` from runs outside the paragraph being laid out. It does not: `content_end` is *this paragraph's* content end (`crates/text/src/layout.rs:529`), computed by `strip_break` (`crates/text/src/layout.rs:1159`), which trims the paragraph terminator, so `content_end <= prange.end`; the filter at `crates/text/src/layout.rs:660` is `rs.max(prange.start) < end.min(content_end)`, so a run that starts after this paragraph has `rs >= prange.end >= content_end` and is dropped. Receipt: `agents/receipts/UP-03.md`.
