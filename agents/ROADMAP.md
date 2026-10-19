@@ -40,7 +40,7 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | PC-11 | Model info on layers | Properties shows which model made a layer | Done | Codex-Strata | PR #54 |
 | UI-01 | Manager window design | The calm one-column 1d design | Up next | Codex-cloud + Erik (was Claude) |  |
 | PC-10 | Open Craft AI Manager button | One button in every AI message | Planned | Codex-Strata | after PC-09, MG-12 |
-| MG-13 | Manager window | Model list, downloads, licence notes, disk use | Planned | Codex-Strata | after UI-01 |
+| MG-13 | Manager window | CAIM brief; section 6 deferred | Up next after current work | Codex-Strata | prompts/local-mg-13.md; Erik authorized Oct 19 |
 | BH-02 | M2 bug hunt | Sweep everything M2 added before sign-off | Planned | Claude + Codex-cloud + Codex-Strata |  |
 | PC-12 | M2 sign-off | Your hands-on check on the 4090 | Planned | Codex-Strata + Erik |  |
 
@@ -91,3 +91,5 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | DML | Non-NVIDIA GPUs | DirectML (D10: later) | Planned | Codex-Strata |  |
 | MAS | Mac (Apple Silicon) | Starts with the MAS-00 build probe | Planned | Erik + Claude |  |
 | FDY | Our own models (Foundry) | Clean training data, parked | Planned |  | parked |
+
+Queue update, Oct 19: Erik directly authorized MG-13 against CAIM `agents/CAIM-UI-BRIEF.md`, next after Codex-Strata's current work. Section 6 stays deferred. Older UI hold wording does not block this scoped task.
