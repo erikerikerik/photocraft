@@ -48,6 +48,9 @@ pub(crate) struct FakeProvider {
     /// Offer `subject_mask` in `tasks()` and answer a mask request with `fake_mask`, so the AI
     /// Select Subject and Remove Background tests have a provider that can do the job.
     pub(crate) offer_mask: bool,
+    /// Report a model build other than the default one, so a test can watch a newer version leave
+    /// an older layer's record alone (PC-11).
+    pub(crate) model_version: Option<String>,
 }
 
 impl AiProvider for FakeProvider {
@@ -155,7 +158,7 @@ impl AiProvider for FakeProvider {
             elapsed_ms: 12,
             // Amendment 18's extra provenance, so the commands have something to pass through.
             provenance: AiProvenance {
-                model_version: Some("epoch_244".into()),
+                model_version: Some(self.model_version.clone().unwrap_or_else(|| "epoch_244".into())),
                 model_sha256: Some("58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c".into()),
                 device_requested: Some("auto".into()),
                 device_name: Some("CPU".into()),

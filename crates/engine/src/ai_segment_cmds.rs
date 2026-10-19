@@ -18,6 +18,7 @@ use photocraft_geom::{Rect, Size};
 use serde_json::{Value, json};
 
 use crate::ai::{self, AiError, AiOutput, AiProvider, AiRequest, AiTask};
+use crate::ai_provenance;
 use crate::cutout_cmds;
 use crate::jobs::{self, JobCtx};
 use crate::smartselect_cmds::{self, with_doc_sampler};
@@ -324,12 +325,17 @@ struct Masked {
     rect: Rect,
     coverage: Vec<f32>,
     ai: Value,
+    /// What made the mask, for the layer that is about to get it (amendment 18, PC-11). `None`
+    /// when the caller only wants a selection: Select Subject marks nothing on a layer, so there
+    /// is no layer to remember the job.
+    record: Option<ai_provenance::Record>,
 }
 
 /// The shared AI path: ask the manager its limit and the tasks it offers, read the image
 /// downscaled, run the job to completion, and stretch the mask back to the document area. `layer`
 /// is the layer to sample (`None` = the composite), chosen as the classical commands choose it.
-fn mask_job(provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerId>, sample_all: bool, ctx: &JobCtx) -> Result<Masked> {
+/// `command` is the command the record is for, when the caller has a layer to leave it on.
+fn mask_job(command: Option<&str>, provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerId>, sample_all: bool, ctx: &JobCtx) -> Result<Masked> {
     ctx.progress(0.0, "Finding subject");
     // The limit first, as Generative Fill does: for Craft AI Manager this also finds out whether it
     // is running, before any pixels are read. A mask task is never refused for size (amendment 18):
@@ -376,6 +382,7 @@ fn mask_job(provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerI
     // the wrong size or with a NaN in it reaches neither the document nor the provider's queue.
     let result = ai::run_to_completion(provider.as_ref(), &req, ctx, POLL_EVERY).map_err(EngineError::from)?;
     let ai = provenance(&result);
+    let record = command.map(|command| ai_provenance::Record::from_result(command, &result));
     let AiOutput::Mask { coverage, size } = result.output else {
         return Err(EngineError::Other("The AI provider returned an image to a mask request".to_string()));
     };
@@ -386,7 +393,7 @@ fn mask_job(provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerI
     let Some(bbox) = coverage_bbox(&coverage, size) else {
         // Nothing selected: an empty coverage reads as "no subject found" to both callers, exactly
         // as a mask that quantises to zero everywhere did.
-        return Ok(Masked { rect: Rect::new(0, 0, 0, 0), coverage: Vec::new(), ai });
+        return Ok(Masked { rect: Rect::new(0, 0, 0, 0), coverage: Vec::new(), ai, record });
     };
     let touched = touched_rect(bbox, size, area.size());
     // Refuse before allocating for it, as Generative Fill and Content-Aware Fill do: a mask over
@@ -407,7 +414,7 @@ fn mask_job(provider: &Arc<dyn AiProvider>, doc: &Document, layer: Option<LayerI
         area.x0.saturating_add(touched.x1),
         area.y0.saturating_add(touched.y1),
     );
-    Ok(Masked { rect, coverage, ai })
+    Ok(Masked { rect, coverage, ai, record })
 }
 
 /// `select.subject` with `"method": "ai"`: the mask becomes the selection, combined with the current
@@ -426,7 +433,8 @@ pub(crate) fn select_subject(s: &mut Session, p: &Value) -> Result<Value> {
         s,
         "Select Subject",
         true,
-        move |ctx| mask_job(&provider, &doc, target, sample_all, ctx),
+        // No record: a selection is not a layer, so nothing here remembers the job (amendment 18).
+        move |ctx| mask_job(None, &provider, &doc, target, sample_all, ctx),
         move |s, masked| {
             let region = mask_region(&masked.coverage, masked.rect);
             let mut out = smartselect_cmds::apply(s, "Select Subject", region.as_ref(), m)?;
@@ -455,7 +463,7 @@ pub(crate) fn remove_background(s: &mut Session, p: &Value) -> Result<Value> {
         s,
         "Remove Background",
         move |doc, _, ctx| {
-            let masked = mask_job(&provider, doc, Some(id), sample_all, ctx)?;
+            let masked = mask_job(Some(ai_provenance::CMD_REMOVE_BACKGROUND), &provider, doc, Some(id), sample_all, ctx)?;
             let mut region = mask_region(&masked.coverage, masked.rect).ok_or_else(|| EngineError::Other("no subject found".to_string()))?;
             if refine {
                 ctx.progress(0.95, "Refining edge");
@@ -468,7 +476,13 @@ pub(crate) fn remove_background(s: &mut Session, p: &Value) -> Result<Value> {
                 }
             }
             crate::extra_cmds::background_to_layer_for_mask(doc, id);
-            doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = Some(LayerMask { surface: matting::region_surface(&region), ..LayerMask::reveal_all() });
+            let layer = doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?;
+            layer.mask = Some(LayerMask { surface: matting::region_surface(&region), ..LayerMask::reveal_all() });
+            // The record goes on with the mask, in the same undo step: undo takes the mask and the
+            // record away together, redo brings both back (amendment 18, PC-11).
+            if let Some(record) = masked.record.as_ref() {
+                ai_provenance::write(layer, record)?;
+            }
             doc.selection = None;
             let b = region.bbox;
             Ok(([b.x0, b.y0, b.width() as i32, b.height() as i32], masked.ai))

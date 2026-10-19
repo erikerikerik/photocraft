@@ -12,6 +12,7 @@ pub mod actions_edit_cmds;
 pub mod adjust_cmds;
 pub mod adjust_params;
 pub mod ai;
+pub mod ai_provenance;
 pub mod ai_segment_cmds;
 pub mod align_cmds;
 mod allocation;

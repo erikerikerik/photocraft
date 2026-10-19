@@ -3971,3 +3971,7 @@ curves	Smooth	Vloeiend maken
 	GPU Memory (MB, 0 = Automatic)	GPU-geheugen (MB, 0 = Automatisch)
 	{name} was changed by another app after it was opened or saved here.	{name} is door een andere app gewijzigd nadat het hier is geopend of bewaard.
 	Replace it with this document, or cancel and use File › Save As to keep both.	Vervang het door dit document, of annuleer en gebruik Bestand › Opslaan als om beide te houden.
+# Properties › Made with: the AI model that made or masked the layer (PC-11)
+	Made with	Gemaakt met
+	SHA-256	SHA-256
+	Device	Apparaat

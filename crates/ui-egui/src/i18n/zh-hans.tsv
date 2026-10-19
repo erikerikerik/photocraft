@@ -2828,3 +2828,7 @@ curves	Smooth	平滑
 	Replace	替换
 	{name} was changed by another app after it was opened or saved here.	{name} 在此处打开或存储后已被其他应用更改。
 	Replace it with this document, or cancel and use File › Save As to keep both.	用此文档替换它，或取消并使用“文件 › 另存为”以保留两者。
+# Properties › Made with: the AI model that made or masked the layer (PC-11)
+	Made with	生成所用
+	SHA-256	SHA-256
+	Device	设备
