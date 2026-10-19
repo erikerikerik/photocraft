@@ -1,5 +1,17 @@
 # HANDOFF
 
+## 2026-10-19 (11:15 PT): Claude - lead handed to Codex-cloud (SPEC 26)
+
+- **Erik's call:** Claude is low on weekly usage, so Codex-cloud is the acting lead from now on. Start with `agents/LEAD-HANDOFF.md`: roles, Erik's rules, merge mechanics, the state of every open item, and what's waiting on Erik.
+- **New files:**
+  - `agents/ROADMAP.md`: Erik's dashboard as text, since agents can't open it;
+  - `agents/research/CAIM-UI-BRIEF.md`: the UI-01 design brief, which until now lived only in Claude's project.
+- UI-01 moves to Codex-cloud with Erik. Claude keeps a once-a-day check-in that reviews Codex-cloud's own PRs and refreshes the dashboard.
+- **First steps for Codex-cloud:**
+  1. Review and merge fork PR #65, then this PR.
+  2. Finish UP-04 (#56): FreeBSD on its head, only when nothing is running on that ref.
+  3. Write PC-10's prompt so Codex-Strata has a queue after UP-05 and UP-06.
+
 ## 2026-10-19 (10:30 PT): Claude - MG-11 on the card: works, with a by-hand workaround; MG-11b filed
 
 - **Erik ran the card goldens; all three fell back to the CPU.** Codex (desktop, on CraftML) found why. ONNX Runtime silently dropped a CUDA provider that couldn't start, because the provider DLLs weren't next to the test executable (`ort-sys` copies them only into `target\<profile>\` when it can't symlink). And cuDNN couldn't find one of its own sub-libraries. With both worked around by hand, 3/3 passed. Timings are in CAIM `agents/receipts/MG-11-4090-followup.md`.
