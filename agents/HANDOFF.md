@@ -4,7 +4,7 @@
 
 - **Found:** upstream's `storytold/craft-ai-integrations` is an in-process AI layer for all Craft apps (provider trait, catalogue with SHA-256 and licence, consent, egui widgets, ComfyUI, SAM 3, Candle/Burn engines). First draft; no app adopts it end to end; no real local engine; Remove Background has no local recipe. Its `docs/STATUS.md` says the maintainers have suggested a daemon with IPC, with no wire format defined. That is the role CAIM already plays.
 - **Erik chose D19 (c):** finish what is in flight; AI-C04, AI-C07 and CAIM-07 are held (all were after M2 anyway); UI-01 reads `craft-ai-egui` first and matches its wording, with no dependency on the crate. M2 is not blocked.
-- **Next:** Erik talks to moonw0man (ArtCraft Discord, Senior Contributor) about CAIM as their out-of-process provider; Claude drafted the note. UPW-02 tracks the answer. Autopilot queue unchanged (UP-05, UP-06).
+- **Next:** moonw0man (ArtCraft Discord) pointed us to Jeremy, who leads the repo, and asked for GitHub so others can follow. Erik opens a feature-request issue there (Claude drafted it) proposing CAIM as their out-of-process provider. UPW-02 tracks the answer. Autopilot queue unchanged (UP-05, UP-06).
 
 ## 2026-10-19 (07:10 PT): Claude - PC-09 and MG-11 merged
 
