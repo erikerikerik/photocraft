@@ -12,7 +12,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 use std::io::{Read, Write};
-use std::net::{TcpStream, ToSocketAddrs};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -141,18 +141,7 @@ impl Endpoint {
             Endpoint::Unix(path) => Err(Error::Unreachable(format!("{}: Unix sockets are not available here", path.display()))),
             Endpoint::Tcp(host, port) => {
                 let addrs = (host.as_str(), *port).to_socket_addrs().map_err(|e| Error::Unreachable(format!("{host}:{port}: {e}")))?;
-                let mut last_error = None;
-                for addr in addrs {
-                    match TcpStream::connect_timeout(&addr, CONNECT) {
-                        Ok(s) => {
-                            let _ = s.set_read_timeout(Some(REQUEST));
-                            let _ = s.set_write_timeout(Some(REQUEST));
-                            return Ok(Stream::Tcp(s));
-                        }
-                        Err(e) => last_error = Some(format!("{host}:{port}: {e}")),
-                    }
-                }
-                Err(Error::Unreachable(last_error.unwrap_or_else(|| format!("{host}:{port}: no address"))))
+                connect_tcp(host, *port, addrs)
             }
         }
     }
@@ -172,6 +161,24 @@ impl std::fmt::Display for Endpoint {
             Endpoint::Tcp(h, p) => write!(f, "{h}:{p}"),
         }
     }
+}
+
+/// Open the first address that answers, trying each one the resolver gave us: a name with several
+/// answers (dual-stack, multihomed) is not given up on after the first is refused. The last error is
+/// what the caller hears, so a server that is down still says why.
+fn connect_tcp(host: &str, port: u16, addrs: impl Iterator<Item = SocketAddr>) -> Result<Stream> {
+    let mut last_error = None;
+    for addr in addrs {
+        match TcpStream::connect_timeout(&addr, CONNECT) {
+            Ok(s) => {
+                let _ = s.set_read_timeout(Some(REQUEST));
+                let _ = s.set_write_timeout(Some(REQUEST));
+                return Ok(Stream::Tcp(s));
+            }
+            Err(e) => last_error = Some(format!("{host}:{port}: {e}")),
+        }
+    }
+    Err(Error::Unreachable(last_error.unwrap_or_else(|| format!("{host}:{port}: no address"))))
 }
 
 enum Stream {
