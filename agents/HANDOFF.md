@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-20: Codex-cloud - BH-02b part 1 findings parked for Claude
+
+- **Done:** independently read the M2 scope in both repos before opening the existing §3 findings, excluding Codex-cloud's own MG-11b diff as required. Added B1-B8 with quoted code, file/line evidence, triggers and reading repros; B2 is retained and marked as the independently found duplicate of S1. Rechecked the M1 fixes and the lighter UP-02/04/05/06 scope. No product code or tests were changed.
+- **Not done:** GPU section H is deliberately deferred to part 2; MG-13 is not merged, so its code-read addendum and the H rerun are also outstanding. No fresh release build, GPU run, guard mutation, upstream post or fix was attempted in this code-read part.
+- **Next:** Claude triages B1-B8 and assigns final severities / BF tasks. When Erik schedules part 2, stop Strata, use isolated `CRAFT_AI_ENDPOINT` and `CRAFT_AI_MODELS`, run H1-H3, and record VRAM/RAM timestamps. After CAIM #13 merges, read its diff and repeat H. **PARKED: needs Claude.**
+
 ## 2026-10-20 (11:20 PT): Claude - BH-02, the M2 bug hunt, has started (Erik)
 
 - **Erik asked for the M2 bug hunt now.** PC-10, UP-05 and UP-06 are merged, and MG-13 (CAIM #13) joins the sweep when it merges. Plan, checklist and findings live in `agents/reviews/2026-10-20-m2-bug-hunt.md`.
