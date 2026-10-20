@@ -1,5 +1,9 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - Erik authorizes confirmed-fix rounds on Codex-Strata
+
+Erik: "Always fix all the things using Codex-strata" in response to the request for extra rounds on #68/#69. Recorded as SPEC 27 and `agents/prompts/local-confirmed-fixes.md`. Codex-Strata retains both existing branches/PRs; after current work, fix scoped IPv6 wire authorities and replace the released-port race with deterministic coverage. Further correction rounds for confirmed defects are authorized; reviews and all gates remain. MG-13 stays queued after those fixes if not already started; no active task interrupted.
+
 ## 2026-10-19: Codex-cloud - Erik queues MG-13 after current Strata work
 
 Erik directly supplied the MG-13 build prompt: egui in the same process as `caim open`, library calls rather than CLI; CAIM `agents/CAIM-UI-BRIEF.md` is authoritative; one state-model test per row in sections 4.1–4.4 plus size formatting; skip section 6 decisions; one product PR, receipt and HANDOFF. The detailed brief is merged in CAIM #12 (`1602459`).
