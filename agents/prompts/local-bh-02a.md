@@ -1,10 +1,12 @@
 # Prompt for Codex-Strata: BH-02a (M2 bug hunt: run the attack checklist)
 
-Task **BH-02a** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews/2026-10-20-m2-bug-hunt.md` (read all of it first). Rules: SPEC amendments 20, 21, 25 and 26. Erik asked for this on Oct 20.
+Task **BH-02a** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews/2026-10-20-m2-bug-hunt.md`: read **§1 and §2 only** at the start; §3 already holds other reviewers' findings, so open it only after you have written yours (see below). Rules: SPEC amendments 20, 21, 25, 26 and 28. Erik asked for this on Oct 20.
 
-**Your role: runner and independent reviewer (D22, Erik, Oct 20).** Most of M2 was written by Codex-Strata running an earlier Strata model. You run on a **different model** (Erik switched Strata to `qwen3.8-flash-next-unsloth-ud-q5_k_xl` on Oct 20), which counts as an independent reviewer under D22, on these conditions:
+**Start in a fresh Codex session (Erik, Oct 20).** The previous autopilot session's context outgrew this model's 131,072 tokens, so Erik restarted Codex for this task. Keep the context lean: read files in parts, and don't paste whole files or long logs into the conversation; write logs to disk and quote only the lines that matter.
+
+**Your role: runner and independent reviewer (D22, SPEC amendment 28, Erik, Oct 20).** Most of M2 was written by Codex-Strata running an earlier Strata model. You run on a **different model** (Erik switched Strata to `qwen3.8-flash-next-unsloth-ud-q5_k_xl` on Oct 20), which counts as a different reviewer under SPEC amendment 28, on these conditions:
 - **Record the model.** The receipt's first line names the model and Strata version you ran on. If Strata is running anything else, stop and say so.
-- **Form your view before reading the authors' claims.** For the code under review, read SPEC amendments 11, 18 and 20, the task prompts in `agents/prompts/` and the code itself, and write down your findings **before** you open that code's receipts or HANDOFF entries. Only then read the receipts, to check whether a finding is already known or deliberately accepted. Note which, rather than dropping the finding.
+- **Form your view before reading the authors' claims.** For the code under review, read SPEC amendments 11, 18 and 20, the task prompts in `agents/prompts/` and the code itself, and write down your findings **before** you open that code's receipts or HANDOFF entries, or the existing rows in §3 of the review file. Only then read them, to check whether a finding is already known or deliberately accepted. Note which, rather than dropping the finding.
 - **Don't fix in this task.** Fixes come back as BF-xx tasks after Claude triages, so finding and fixing stay separate steps.
 
 You do two things:
@@ -29,7 +31,7 @@ For every finding, **propose** a severity (P0–P3, as defined in the review fil
 **Record** every item as one row in a new receipt `agents/receipts/BH-02a.md`: item id, command or steps, expected, actual, PASS/DIFF, log path. For each DIFF, put a minimal repro in its own subsection. Then copy each DIFF, and each finding from your read, as a row into §3 of `agents/reviews/2026-10-20-m2-bug-hunt.md`: part `BH-02a`, severity = your proposal marked "(proposed)", file:line, repro or "by reading", status `new`. Add your "Checked and correct" list under §3, as in M1.
 
 **Never:**
-- change product code (no fixes in this task, D22);
+- change product code (no fixes in this task, SPEC 28);
 - open fix PRs during this task;
 - touch Erik's live manager, its files or the card;
 - print or store the token;

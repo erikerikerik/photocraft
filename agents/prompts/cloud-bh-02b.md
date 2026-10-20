@@ -1,6 +1,6 @@
 # Prompt for Codex-cloud: BH-02b (M2 bug hunt: independent read, plus the GPU section)
 
-Task **BH-02b** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews/2026-10-20-m2-bug-hunt.md`. Rules: SPEC amendments 18, 20 and 26. Erik asked for this on Oct 20.
+Task **BH-02b** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews/2026-10-20-m2-bug-hunt.md`. Read **§1 and §2** first. §3 already holds other reviewers' findings: open it only after you have written yours, then mark duplicates instead of dropping them. Rules: SPEC amendments 18, 20 and 26. Erik asked for this on Oct 20.
 
 **Part 1: independent read (cloud task, no GPU).** Read every line M2 added in both repos, using the scope list in §1:
 - `crates/engine` AI parts, `crates/ai-client` and the UI wiring for PC-08/09/10/11 in the fork;

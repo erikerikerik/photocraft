@@ -8,6 +8,7 @@
   - **BH-02b, Codex-cloud** (`agents/prompts/cloud-bh-02b.md`): independent read of all M2 code, then the GPU section with Strata stopped.
   - **BH-02c, Claude:** the security read.
 - **Then** Claude triages, and fixes come back to Codex-Strata as BF-xx tasks. PC-12 waits for every P0/P1 fix.
+- **Codex-cloud's review of #76 (Oct 20, 11:09), all five points taken:** BH-02a/b read §1–2 before the existing findings; D22 is now SPEC amendment 28 (Erik OK'd, 11:19); BH-02a runs in a fresh Codex session (Erik restarted Codex, the old one outgrew the model's 131,072-token context); the severity scale now splits security by precondition, so S1 is P1 and S2/S3 are P2; the blank line at EOF is gone.
 
 ## 2026-10-20: Codex-cloud - UP-02c prompt approved with factual corrections
 
