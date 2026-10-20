@@ -145,7 +145,7 @@ pub fn default_endpoint_file() -> Option<PathBuf> {
     platform_data_dir().map(|dir| dir.join("CraftAI").join("endpoint.json"))
 }
 
-fn platform_data_dir() -> Option<PathBuf> {
+pub(crate) fn platform_data_dir() -> Option<PathBuf> {
     #[cfg(windows)]
     {
         std::env::var_os("LOCALAPPDATA").filter(|value| !value.is_empty()).map(PathBuf::from)

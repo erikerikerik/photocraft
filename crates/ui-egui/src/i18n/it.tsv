@@ -4336,3 +4336,10 @@ shape	Appearance	Aspetto
 	Made with	Creato con
 	SHA-256	SHA-256
 	Device	Dispositivo
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Apri Craft AI Manager
+	Craft AI Manager isn't running.	Craft AI Manager non è in esecuzione.
+	Craft AI Manager isn't installed.	Craft AI Manager non è installato.
+	Craft AI Manager is starting	Craft AI Manager si sta avviando
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Riprova il comando IA quando è pronto. Avviare il gestore non installa alcun modello.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft non è riuscito ad avviare Craft AI Manager.

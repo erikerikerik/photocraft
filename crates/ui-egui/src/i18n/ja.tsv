@@ -3892,3 +3892,10 @@ curves	Smooth	スムーズ
 	Made with	作成に使用
 	SHA-256	SHA-256
 	Device	デバイス
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Craft AI Manager を開く
+	Craft AI Manager isn't running.	Craft AI Manager は実行されていません。
+	Craft AI Manager isn't installed.	Craft AI Manager はインストールされていません。
+	Craft AI Manager is starting	Craft AI Manager を起動しています
+	Try the AI command again once it is ready. Starting the manager does not install a model.	準備ができたら AI コマンドを再実行してください。マネージャーの起動ではモデルがインストールされません。
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft は Craft AI Manager を起動できませんでした。

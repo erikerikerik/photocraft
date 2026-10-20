@@ -3702,3 +3702,10 @@ curves	Smooth	Làm mượt
 	Made with	Tạo bằng
 	SHA-256	SHA-256
 	Device	Thiết bị
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Mở Craft AI Manager
+	Craft AI Manager isn't running.	Craft AI Manager không chạy.
+	Craft AI Manager isn't installed.	Craft AI Manager chưa được cài đặt.
+	Craft AI Manager is starting	Craft AI Manager đang khởi động
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Hãy thử lại lệnh AI sau khi đã sẵn sàng. Khởi động trình quản lý không cài đặt mô hình.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft không thể khởi động Craft AI Manager.

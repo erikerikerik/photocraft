@@ -80,12 +80,18 @@ mod window_frame;
 use photocraft_engine::Session;
 use photocraft_ui_egui::PhotocraftApp;
 
+/// PhotoCraft's Craft AI Manager client, shared by the session (PC-04) and by the manager-state
+/// seam (PC-10). The client re-reads the manager's endpoint file for every job, so a manager
+/// started after the app is still picked up.
+fn ai_client() -> std::sync::Arc<photocraft_ai_client::CaimProvider> {
+    std::sync::Arc::new(photocraft_ai_client::CaimProvider::new())
+}
+
 /// The session the app starts with: PhotoCraft's Craft AI Manager client attached, so an AI command
 /// reaches a running manager and one that isn't running says "Craft AI Manager isn't running"
-/// rather than failing differently (PC-04). The client re-reads the manager's endpoint file for
-/// every job, so a manager started after the app is still picked up.
-fn with_ai(mut session: Session) -> Session {
-    session.set_ai_provider(Some(std::sync::Arc::new(photocraft_ai_client::CaimProvider::new())));
+/// rather than failing differently (PC-04).
+fn with_ai(mut session: Session, client: std::sync::Arc<photocraft_ai_client::CaimProvider>) -> Session {
+    session.set_ai_provider(Some(client));
     session
 }
 
@@ -589,7 +595,24 @@ fn main() -> eframe::Result {
             };
             #[cfg(not(target_os = "linux"))]
             let session = Session::new();
-            let mut app = PhotocraftApp::new(with_ai(session), services);
+            let caim = ai_client();
+            let mut app = PhotocraftApp::new(with_ai(session, caim.clone()), services);
+            // PC-10 (SPEC amendment 18): the two Craft AI Manager seams. Asking the manager whether
+            // it is running is a loopback request, so it happens only after an AI command has
+            // already failed, never on every frame; starting it happens only when the user presses
+            // the button on that message. Both are native-only, which is why the web build and the
+            // CLI - which never install these - offer no button and start nothing.
+            app.services.caim_state = Some(Box::new(move |task| match photocraft_ai_client::manager_state(caim.as_ref(), task, None) {
+                photocraft_ai_client::ManagerState::NotInstalled => photocraft_ui_egui::caim_ui::CaimState::NotInstalled,
+                photocraft_ai_client::ManagerState::NotRunning => photocraft_ui_egui::caim_ui::CaimState::NotRunning,
+                photocraft_ai_client::ManagerState::ModelMissing => photocraft_ui_egui::caim_ui::CaimState::ModelMissing,
+                photocraft_ai_client::ManagerState::NoLaunchAction => photocraft_ui_egui::caim_ui::CaimState::NoLaunchAction,
+            }));
+            app.services.open_caim = Some(Box::new(|| match photocraft_ai_client::open_registered(None) {
+                Ok(()) => Ok(()),
+                Err(photocraft_ai_client::LaunchError::NotRegistered) => Err(photocraft_ui_egui::caim_ui::OpenCaimError::NotInstalled),
+                Err(photocraft_ai_client::LaunchError::Failed(reason)) => Err(photocraft_ui_egui::caim_ui::OpenCaimError::Failed(reason)),
+            }));
             app.min_frame_ms = uncapped.then_some(1000.0 / 240.0);
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.custom_titlebar = custom_titlebar;
