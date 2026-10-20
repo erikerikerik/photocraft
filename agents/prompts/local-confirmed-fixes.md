@@ -1,0 +1,17 @@
+# Codex-Strata: confirmed-fix queue (Erik, Oct 19)
+
+Erik's standing instruction: **"Always fix all the things using Codex-strata".** This authorizes the additional correction rounds needed for confirmed defects, including the previously parked findings on fork #68 and #69. It does not waive independent review, tests, CI, exact-head FreeBSD, security constraints or decisions about new product scope. Do not ask Erik again just because a confirmed fix needs another review round. If a finding is disputed, establish it with a deterministic regression/reproduction before changing code.
+
+At the next task-selection boundary, finish/reconcile the current claimed work first. Do not interrupt an active MG-13 or other task. Then resolve existing #68 and #69 on their existing task branches, before starting other new feature work. Keep MG-13 queued afterwards if it has not started. Do not start duplicate PRs/workers or take over another agent's uncommitted files. Check STOP before tasks/pushes/merges.
+
+## UP-05, fork #68 / upstream #7831
+
+Continue `ai/up-05-ipp-ipv6` and its upstream twin `upfix/ipp-ipv6-endpoints`. Read the current review threads and receipt. The remaining confirmed finding is scoped IPv6 zone handling in request authorities (`host()` feeds both HTTP Host and the IPP printer URI). Preserve the raw host/zone for socket resolution. Verify applicable HTTP/IPP URI rules against primary specifications before implementing the smallest correct wire-format fix; do not assume a display string is the correct URI representation. Add deterministic regressions for numeric zone ids and the resulting request authority/printer URI, plus normal IPv6/IPv4/hostnames remaining unchanged. Keep any platform support limit explicit rather than inventing a new product scope. Follow the original task's upstream-first fix/cherry-pick workflow and use the existing PRs.
+
+## UP-06, fork #69 / upstream #7835
+
+Continue `ai/up-06-ipp-test-free-port` and upstream twin `upfix/ipp-test-free-port`. The old assertion still depends on an ephemeral port remaining unused after the listener is dropped. Passing runs and a later clean review do not disprove that race. Replace the raced-port assumption with deterministic refusal/error-propagation coverage using a private connection seam. The fork already has `connect_tcp` with an injected connector (UP-04); inspect the upstream tree before reusing/refactoring a small private helper there. Do not add a public printers() injection API or a new dependency merely for the test. Keep real fake-server protocol tests intact. Prove the refusal path produces Error::Unreachable and preserves the relevant error; tests must fail when that behavior is broken, without relying on a port nobody owns. If a concrete obstacle needs a scope decision, report it precisely, rather than declaring the current race fixed.
+
+## Complete both through the normal gates
+
+Run touched-crate tests, Clippy/fmt, layering and applicable guards from the existing task prompts; update receipts/HANDOFF. Request Codex-cloud independent review of new commits. Do not self-approve. Re-run applicable CI and obtain exact-final-head FreeBSD PASS (SPEC 25: x86_64 required, aarch64 advisory). Never dispatch over an active FreeBSD run on the same ref; wait until it finishes before dispatching for the new head. A green run on an older head does not validate a new push. Preserve reviewed code with normal merges, no force-push. No merge until confirmed findings are resolved and all applicable gates pass.
