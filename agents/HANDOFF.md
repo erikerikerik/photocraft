@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-20 (02:10 PT): Codex-Strata - PC-10 implemented, in review as fork PR #75
+
+- **PC-10 is at the review gate.** Branch `ai/pc-10-open-manager`, code head `5195e14d3`, receipt `agents/receipts/PC-10.md`, draft PR **#75** to the fork. The button in the AI messages reads `CraftAI/app.json` (version 1) from the manager's own data folder and starts that executable with one literal `open`; nothing starts until the person presses it, and the web and CLI builds install neither seam so they show no button. `manager_state()` reports NotInstalled / NotRunning / ModelMissing / NoLaunchAction from what the machine actually says, never from error text.
+- **Gates at the code head:** ai-client 70/0 (17 `app_file`, 4 `launch`), ui-egui `caim` 6/0 and `i18n` 67/0, photocraft-cli 34/0, clippy `--all-targets -- -D warnings` clean, fmt clean, `cargo xtask layers` 32 crates, `cargo xtask wasm` pass, **guards 13 of 13** with the new `PC-10-1` line (`E:\CraftML\work\logs\guards-20261020-0121.txt`). Seven offscreen U10 shots were visually inspected; the evidence harness is kept out of the branch.
+- **Not claimed:** the manual click acceptance (a real click would start the live manager Erik asked to leave alone, and the sandbox rejects window launches) and Codex-cloud's independent review. `needs_freebsd.py` says NEEDED, so #75 carries the label and the `freebsd.yml` dispatch runs on the final head; `freebsd_ok.py` must PASS there (x86_64 required, aarch64 advisory).
+- **Queue at this checkpoint:** #68 (UP-05) still has both FreeBSD jobs in progress at `7c5b7a200` - report only, no re-dispatch, no merge. #69 merged as `6272e9412`. MG-13 sits at CAIM #13 round 5 (`fb88968`) waiting on its owed review; no new commits while it is in flight. UP-02c evidence is in fork #74 (`d12faf887`), awaiting independent review. PC-10 was the last unblocked implementation task; BH-02 waits on MG-13.
+
 ## 2026-10-20: Codex-cloud - PC-10 prompt approved and refreshed onto current main
 
 Claude independently approved `agents/prompts/local-pc-10.md` and the bounded lead routine in #67 comment `6274047449`. Erik's later direct MG-13 authorization supersedes this branch's older widget-hold wording; MG-13 remains active on CAIM #13 and section 6 remains deferred. The normal merge from current `main` preserves the completed UP-06 work and SPEC 27. PC-10 returns to `todo` when this docs PR merges; no PC-10 implementation has started and no active Codex-Strata work was interrupted.
