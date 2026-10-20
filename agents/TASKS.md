@@ -30,6 +30,8 @@ Every PhotoCraft task also passes the AGENTS.md §5 gate for the crates it touch
 | D12 | done | BiRefNet for MG-10. **Decided (Erik, Oct 17): (b) lite** - BiRefNet_lite (swin_v1_tiny), `onnx-community/BiRefNet_lite-ONNX` `onnx/model.onnx`, 224,005,088 bytes, SHA-256 `5600024376f572a557870a5eb0afb1e5961636bef4e1e22132025467d0f03333`, is the default download (general may be offered later, e.g. with CUDA in MG-11). **(a) override:** the D11 override is signed with Erik's standard wording - "non-commercial use only", not "personal use only" (see `local-mg-10.md`). | Unblocks MG-10. |
 | D17 | done | MG-12 (CAIM PR #7) is parked after its third fix round: a seventh P2, `LaunchLock::Drop` unlinks the lock file (`crates/caim/src/endpoint.rs:574`), so on Unix a waiter can lock an orphaned inode while a new run creates the name again. **Decided (Erik, Oct 18, 11:28): round 4, option 1** - keep the lock file linked (Drop only closes the handle; also drop the unlink at `:490`), plus a test that never sees two `Taken`. Claude reviews that round. Options 2 (re-stat after locking) and 3 (accept the window) are in the PR. | Unblocks MG-12, then MG-13 and PC-10. |
 
+**Fix priority (Erik, Oct 19; SPEC 27):** after current claimed work, Codex-Strata resolves confirmed findings in existing UP-05 #68 and UP-06 #69 using `agents/prompts/local-confirmed-fixes.md`, then takes MG-13 if not already started. Additional correction rounds are authorized; independent review and CI/FreeBSD still required.
+
 ## Machine setup (Erik, admin account unless noted)
 
 | ID | Status | Task | Check |
