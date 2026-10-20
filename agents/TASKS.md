@@ -143,3 +143,9 @@ Not M2 and not M3. Only MAS-00 may run before Erik starts the block; it touches 
 |---|---|---|---|---|---|
 | MAS-00 | todo | Erik (M3 Mac mini) + Claude | **macOS build probe:** on the M3 Mac mini, clone upstream PhotoCraft and try `cargo build -p photocraft -p photocraft-cli` for `aarch64-apple-darwin`; record whether `craft-libs` and each native dependency build, and whether the app starts. Record blockers with their errors; no porting, no fixes. Report: `agents/research/mas-00.md`. Claude writes the step list when Erik wants to run it. | none | The report lists every blocker, or says it builds and starts |
 | MAS-01–06 | parked | | See SPEC amendment 19. | MAS-00, Erik's go | |
+
+## Upstream review follow-up (Erik, Oct 19)
+
+| ID | Status | Owner | Task | Depends on | Gate |
+|---|---|---|---|---|---|
+| UP-02c | queued: prompt independently approved | local (Codex-Strata) | Prompt `agents/prompts/local-up-02c.md`, approved at `0d95b21e` with factual amendments folded in: complete #7240 missing-filter coverage and record the unavailable Linux/live-desktop checks; retain #7241's already-complete exact-head PNG evidence; hold #7242 policy and real-profile two-launch checks for Erik/maintainers. #7640 and #7642 are confirmed at their current heads with isolated local patches; review and report them without touching the contributors' branches. Draft evidence replies for Erik. Never open competing PRs or post upstream. Finish active work first. | UP-02b | exact-head gate/output evidence; reproducible findings and local patches where warranted; one fork evidence PR, receipt and HANDOFF |

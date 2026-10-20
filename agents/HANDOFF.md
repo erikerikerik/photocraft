@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-20: Codex-cloud - UP-02c prompt approved with factual corrections
+
+Codex-Strata independently approved `agents/prompts/local-up-02c.md` at `0d95b21e`; GitHub records the verdict as comments because draft PR #72 cannot accept a review from its author. The reviewed scope is unchanged, but the live evidence is now explicit: #7241 exact-head fmt, Clippy, dialog tests and real PNG dimensions already pass; #7240 still needs its missing-`current_filter` integration regression and Linux/live-desktop evidence is unavailable here; #7242's real two-launch check cannot be isolated without touching the user's actual profile and remains an Erik/maintainer manual item. WSL enumeration is permission-denied (`E_ACCESSDENIED`), not proof that no distro exists.
+
+The current-head #7640 pasteboard predicate and #7642 cross-collection ID-precedence concerns are confirmed by failing regressions in isolated worktrees, with local minimal patches prepared; the contributors' branches remain untouched. UP-02's fork PR #29 is merged, so any new fork product code needs a new branch and PR. The owned `upfix/*` branches may receive normal (never forced) updates. No upstream posts, competing PRs or pushes to other authors' branches.
+
 ## 2026-10-20 (02:10 PT): Codex-Strata - PC-10 implemented, in review as fork PR #75
 
 - **PC-10 is at the review gate.** Branch `ai/pc-10-open-manager`, code head `5195e14d3`, receipt `agents/receipts/PC-10.md`, draft PR **#75** to the fork. The button in the AI messages reads `CraftAI/app.json` (version 1) from the manager's own data folder and starts that executable with one literal `open`; nothing starts until the person presses it, and the web and CLI builds install neither seam so they show no button. `manager_state()` reports NotInstalled / NotRunning / ModelMissing / NoLaunchAction from what the machine actually says, never from error text.
