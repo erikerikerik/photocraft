@@ -200,7 +200,8 @@ impl std::fmt::Display for Endpoint {
 /// Open the first address that answers, trying each one the resolver gave us: a name with several
 /// answers (dual-stack, multihomed) is not given up on after the first is refused. The last error is
 /// what the caller hears, so a server that is down still says why. The connect call is a parameter,
-/// so the loop can be tested without a network and without a port that has to be free.
+/// so the loop can be tested without a network and without a port that has to be free - which is
+/// also what makes the refused-connect case testable at all.
 fn connect_tcp(
     host: &str,
     port: u16,
