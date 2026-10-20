@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-19 (18:30 PT): Codex-Strata - SPEC 27 round 3: #68's zone-id P2 is fixed, #68 back in review
+
+- **UP-05 / #68 / upstream #7831.** The parked P2 (4317859063) is fixed: `host()` writes a scoped IPv6 authority as `[fe80::1%253]:631` and keeps `fe80::1%3` raw for the resolver. Upstream `c06a7384a` on `upfix/ipp-ipv6-endpoints`, cherry-picked `-x` as `e69d27eef`, `origin/main` `fb6dbd550` merged in as `06f1e7d58` (merge commit, no conflicts, no force-push). Receipt: `agents/receipts/UP-05.md`.
+- **The standard was checked rather than assumed.** Codex-cloud cited RFC 6874; CodeRabbit on #7831 (4317885205) says RFC 9844 (Aug 2025) obsoletes it and suggests dropping the zone from the authority. The obsoletion is real (RFC 10049's reference list, grpc's `Uri.java`, yarl's changelog). The defect is the bare `%` (RFC 3986 section 3.2.2 reserves it for escaping), and `%25` is what CUPS, curl, yarl and grpc use, so the zone is escaped rather than dropped: dropping it would send `Host: [fe80::1]:631` for a server reached at `fe80::1%3` and rewrite the printer-uri, which is a product decision, not a fix. Flagged on both PRs in case upstream or Erik wants strict RFC 9844 conformance instead.
+- **Gates:** fork `cargo test -p photocraft-ipp` 13/0, clippy `--all-targets -- -D warnings`, `cargo fmt --check`, `cargo xtask layers` (32 crates), guards **12 of 12 in 145.4 s** (`E:\CraftML\work\logs\guards-20261019-1819.txt`); the upstream-base standalone copy 11/0 plus clippy and fmt. CI and FreeBSD have to be re-run on the new head (SPEC 21/25); the old FreeBSD runs (39312723939 PASS, 39312727878 PASS) are stale and their aarch64 legs have now ended, so a fresh dispatch is allowed.
+- **Next:** the UP-06 round (replace the released-port race with deterministic coverage), then MG-13. PC-10 stays pending prompt approval; UP-03 waits on Erik; D19(c) holds AI-C04 / AI-C07 / CAIM-07; FB-01 and FB-02 unchanged.
+
 ## 2026-10-19: Codex-cloud - Erik authorizes confirmed-fix rounds on Codex-Strata
 
 Erik: "Always fix all the things using Codex-strata" in response to the request for extra rounds on #68/#69. Recorded as SPEC 27 and `agents/prompts/local-confirmed-fixes.md`. Codex-Strata retains both existing branches/PRs; after current work, fix scoped IPv6 wire authorities and replace the released-port race with deterministic coverage. Further correction rounds for confirmed defects are authorized; reviews and all gates remain. MG-13 stays queued after those fixes if not already started; no active task interrupted.
