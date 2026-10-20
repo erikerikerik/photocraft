@@ -1,5 +1,9 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - distinguish existing fixes from new validation on #7240/#7241/#7242
+
+Erik explicitly asked to check these three own upstream PRs and address FredApps's comments. All fixes already exist and are mergeable; no code blocker reported. #7241 needs exact-head checks and actual output dimensions; #7240 needs Linux/dbus/GNOME/KDE validation, None-filter integration coverage and description clarification; #7242's earlier unused_mut is fixed, but inherited-environment single-instance policy needs Erik/upstream-maintainer decision. Asked Erik that policy question asynchronously; no dependent behavior change authorized while pending. Updated UP-02c prompt to prioritize these three. Windows WSL inventory returned no installed distro, so no Linux validation claimed.
+
 ## 2026-10-19: Codex-cloud - shared-chat upstream follow-ups queued
 
 Read Erik's shared conversation and verified live upstream PR heads/reviews. #7241 is ours, open on `a52f4587`; FredApps asks for exact-head checks plus exported-file dimensions, while before/after screenshots are already posted. #7640 (`d8245055`, hectorviov) and #7642 (`9333e5aa`, Silvertree2010) are others' open PRs; their cited FredApps reviews are older heads, so recheck before alleging a defect. #7620 is merged (`5a649f8e`) and belongs to the next sync.
