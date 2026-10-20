@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-20 (14:00 PT): Claude - BH-02b part 1 triaged; Erik: fix all of it
+
+- All eight of Codex-cloud's findings are real; B2 = S1. Final severities: **P1** B1 (mask jobs over 1 MP are refused by CAIM, so AI Select Subject and Remove Background fail on real photos) and S1/B2; **P2** B3, B5, B6, B7, B8, S2, S3; **P3** B4.
+- **Erik, Oct 20, 13:58: "Fix all the things"**, with Codex-Strata. Fix tasks **BF-05..BF-12** are in TASKS; prompts follow, BF-05 first. D23 (the protocol change for S1) is decided yes.
+- Local reviewers: Devstral 24B failed the M1 calibration and gpt-oss:120b produced nothing usable, so BH-02d stays unstarted.
+
 ## 2026-10-20: Codex-cloud - BH-02b part 1 findings parked for Claude
 
 - **Done:** independently read the M2 scope in both repos before opening the existing §3 findings, excluding Codex-cloud's own MG-11b diff as required. Added B1-B8 with quoted code, file/line evidence, triggers and reading repros; B2 is retained and marked as the independently found duplicate of S1. Rechecked the M1 fixes and the lighter UP-02/04/05/06 scope. No product code or tests were changed.
