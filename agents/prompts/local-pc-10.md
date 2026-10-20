@@ -1,0 +1,30 @@
+# Prompt for Codex-Strata: PC-10 (Open Craft AI Manager)
+
+**Approved for implementation.** Codex-cloud wrote this prompt; Claude independently approved it in PhotoCraft #67 comment `6274047449`. PC-10 returns to `todo` when #67 merges. Do not interrupt or duplicate Codex-Strata's active MG-13/#68 work.
+
+---
+
+Task **PC-10** in `agents/TASKS.md`, PhotoCraft only. Implement SPEC amendment 18's existing on-demand launch contract and FEATURES B04/U11. Read `AGENTS.md`, SPEC amendments 11, 18, 21, 23, 25 and 26, the current HANDOFF, `docs/architecture.md`, `docs/development.md`, `docs/control-protocol.md`, PC-09's receipt, and the CAIM MG-12 receipt and `app.json` writer/`caim open` implementation. Read the existing native startup/provider injection, `crates/ai-client/src/endpoint.rs`, the UI's immediate and background command-error paths, and platform-service callbacks before choosing the smallest seam.
+
+Use a separate worktree and branch `ai/pc-10-open-manager`, with `CARGO_TARGET_DIR=target/agent-local`. Check for an existing PC-10 PR first. No new dependencies without the existing SPEC justification. Do not alter MG-13, SAM or ComfyUI scope.
+
+**Do:**
+
+1. Read `CraftAI/app.json` from the platform's existing CAIM data directory, following amendment 18 and MG-12 (do not confuse it with endpoint.json). Accept version 1 with an absolute, existing executable whose file name is `caim.exe` on Windows or `caim` elsewhere. Unknown additional JSON fields may be ignored. Missing, malformed, wrong-version, relative, wrong-name or missing-file registrations offer no launch action and never panic. Use bounded reads and ordinary errors. Keep endpoint authentication and BF-04 permission checks unchanged; never log its token.
+2. Launch only after the user clicks **Open Craft AI Manager**. Use the registered executable directly, with the single literal argument `open`, through a native app/platform seam. No shell, command string, PATH lookup, auto-install or automatic launch on failure. Keep filesystem/process handling out of the engine and wasm; do not block rendering while starting the process. Revalidate at click time; a removed executable or failed spawn becomes a plain error, with no success claim. Reuse platform conventions to avoid an unnecessary console window.
+3. AI messages use one plain sentence and at most one action. With a valid registration and no running manager: "Craft AI Manager isn't running." plus the button. For an unready feature/model: preserve the feature-specific missing-model sentence and offer the same button. With no usable registration: "Craft AI Manager isn't installed." and no button, as amendment 18 requires. A successful launch does not mean a model is installed or a job completed; the user can retry the AI command when ready. Ordinary unsupported/failed AI results retain an accurate sentence; unrelated errors do not acquire a launch button.
+4. Cover both immediate and background AI failures through the current UI mechanisms. Preserve typed error information where available; do not classify arbitrary errors by substring alone. Preserve task preflight (`ready` filtering), authentication failures and existing model-missing errors. If the current seam cannot distinguish the required states without changing the agreed provider/protocol contract, stop with a concrete finding for review rather than invent a wire change.
+5. Keep UI thin, state inspectable through existing control facilities, and wording localizable (`tl!` plus the complete catalogs). Follow existing theme tokens and message layout. CLI stays headless and reports normal errors without spawning a manager; wasm offers no native launch button. No preferences redesign, tray, installer, new network endpoint, CUDA change or CAIM product change.
+
+**Tests:**
+
+- Registration fixtures: missing/malformed/wrong-version JSON, relative path, wrong executable name, absent executable and valid executable; executable paths with spaces/non-ASCII. No real manager or user data needed.
+- Inject/capture the process-launch boundary to prove exactly the registered executable and `open` argument are used, only after a click. A failed spawn and registration removed between display/click report an error. Tests must not start CAIM accidentally.
+- UI/control tests or snapshots: manager closed with registration; registration absent; missing model; unsupported/auth/general failures; background and immediate failures. Assert sentence/action count and that ordinary errors have no spurious button. Existing AI command semantics and undo are unchanged.
+- Native launcher cannot be called by wasm or CLI error handling. Build/check both paths. Add a meaningful PC-10 guard line for the registration and launch regression tests.
+
+**Gates:** AGENTS.md section 5 for touched crates, including their tests and Clippy `--all-targets -- -D warnings`; `cargo test -p photocraft-cli`; `cargo fmt --all -- --check`; `cargo xtask layers`; `cargo xtask wasm`; `agents/tools/run-guards.ps1 -Repo photocraft`. Run engine AI tests if its error plumbing changed and `panic_hunt` if commands changed. Visually inspect offscreen screenshots (U10) for the message states; put evidence paths in the receipt. Manual acceptance: CAIM closed + valid app.json -> one click starts it through `caim open`; no registration -> the installed sentence with no button. Record any manual gate you could not run; do not claim it passed.
+
+Process launch, environment/OS folders and client edits require FreeBSD under SPEC 21. Run `needs_freebsd.py`, label as required, and require `freebsd_ok.py` PASS on the final PR head (x86_64 required, aarch64 advisory). Never dispatch on a ref with a FreeBSD run in progress. Independent review and ordinary CI must also pass before merge.
+
+**Finish:** receipt `agents/receipts/PC-10.md` with exact head, architecture seam, gates, screenshot paths and manual result; TASKS status `review`; a short HANDOFF entry; one draft PR to the fork, then the independent review workflow. At most two fix rounds; no self-approval, main pushes, force pushes or changes to held work. A scope/security/product decision is Erik's.
