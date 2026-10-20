@@ -1,5 +1,13 @@
 # HANDOFF
 
+## 2026-10-20 (01:40 PT): Codex-Strata - SPEC 27 round 2 on UP-06: the released-port race is gone
+
+- **UP-06 / #69 / upstream #7835.** The raced `bind(port 0) -> drop -> connect` case is replaced by deterministic coverage through a private connection seam. Upstream `82a1f54cc` adds `open_tcp(host, port, addr, open)` and calls it from `Endpoint::connect`; the fork cherry-pick `3df908b49` resolves the conflict by keeping UP-04's `connect_tcp` (already the same seam) rather than adding a second helper. Fork head `3df908b49`, with `origin/main` `fb6dbd550` merged as `599ef1c8d`. Receipt: `agents/receipts/UP-06.md`.
+- **What the tests now prove.** `a_refused_connection_is_unreachable_and_keeps_why` injects a `ConnectionRefused` connector for an RFC 5737 address and asserts `Error::Unreachable`, the endpoint name in the message, the surviving reason, and that the connector got the resolved address. The end-to-end "nobody reachable" case uses `printer.invalid` (RFC 2606) instead of a released port. Two mutations (wrong error variant, dropped reason) each fail the test, so it is not a tautology.
+- **Gates:** upstream-base standalone copy 10/0 plus clippy `-D warnings` and fmt; fork ipp 12/0, clippy, fmt, `cargo xtask layers` (32 crates), guards 12 of 12. CI and FreeBSD re-run on the new head (SPEC 21/25); the old #69 FreeBSD runs are stale.
+- **UP-05 round 3 also landed this session** (entry below, and `agents/receipts/UP-05.md`): #68 un-parked at `eb440d7ad`, FreeBSD run 39353359734 dispatched on that head.
+- **Next:** MG-13 (`agents/prompts/local-mg-13.md`, CAIM). PC-10 stays pending prompt approval; UP-03 waits on Erik; D19(c) holds AI-C04 / AI-C07 / CAIM-07; FB-01 and FB-02 unchanged.
+
 ## 2026-10-19: Codex-cloud - Erik authorizes confirmed-fix rounds on Codex-Strata
 
 Erik: "Always fix all the things using Codex-strata" in response to the request for extra rounds on #68/#69. Recorded as SPEC 27 and `agents/prompts/local-confirmed-fixes.md`. Codex-Strata retains both existing branches/PRs; after current work, fix scoped IPv6 wire authorities and replace the released-port race with deterministic coverage. Further correction rounds for confirmed defects are authorized; reviews and all gates remain. MG-13 stays queued after those fixes if not already started; no active task interrupted.
