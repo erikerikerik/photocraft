@@ -13,8 +13,8 @@ Two PRs, one per repo, same branch name `ai/bf-06-hello`. **CAIM first** (the se
 2. `caim open`'s probe (`crates/caim/src/endpoint.rs`, `health_probe`): ask `/v1/hello` first with a fresh nonce and check the proof against the token from `endpoint.json`; only on a match send the authorized `/v1/health`. A wrong or missing proof means **not ours**: treat it like the stranger case it already handles (don't count it as a running manager, and never send the token).
 
 **PhotoCraft fork (`crates/ai-client`):**
-3. Before the first authorized request of every operation that sends the token (`tasks`, `max_pixels`, `submit`, and the Manager-state probe), call `/v1/hello` with a fresh nonce on the endpoint read from `endpoint.json` and verify the proof. On a mismatch, refuse with `Something else is answering where Craft AI Manager was. Restart Craft AI Manager.`; on 401 or 404 (a Manager from before this change), refuse with `Craft AI Manager needs an update to work with this PhotoCraft.` Neither case sends the token or any pixels.
-4. `poll`, `result` and `cancel` reuse the endpoint that `submit` verified (they already keep the job's own endpoint). Verify again only if a request fails with a connection error and is retried.
+3. Before **every** request that carries the token (`tasks`, `max_pixels`, `submit`, every `poll`, `result`, `cancel`, and the Manager-state probe), call `/v1/hello` with a fresh nonce on the endpoint read from `endpoint.json` and verify the proof. On a mismatch, refuse with `Something else is answering where Craft AI Manager was. Restart Craft AI Manager.`; on 401 or 404 (a Manager from before this change), refuse with `Craft AI Manager needs an update to work with this PhotoCraft.` Neither case sends the token or any pixels.
+4. No request reuses an earlier check. Each request uses its own connection (`http.rs`), and CAIM can exit mid-job and its port be taken, so every token-carrying request gets its own fresh `/v1/hello` just before it, against the job's recorded endpoint. Put this in one place in `http.rs` or `provider.rs` so no call path can skip it. A proof failure during a job cancels nothing remotely (it can't: the peer isn't ours) and fails the job with the impostor sentence.
 
 **Crypto, both repos:**
 - HMAC-SHA256 from the `hmac` crate, at the version that matches the `sha2` already in each tree (no second `sha2`/`digest` in `Cargo.lock`). `cargo deny` must stay clean (it's MIT OR Apache-2.0).
@@ -26,6 +26,7 @@ Two PRs, one per repo, same branch name `ai/bf-06-hello`. **CAIM first** (the se
 - client: a fake server that answers `/v1/hello` with a wrong proof receives no `Authorization` header and no multipart body (assert on what it received);
 - client: an M2-era fake (401 on `/v1/hello`) gets the update sentence and no token;
 - client: the right proof lets a job run end to end;
+- client: a fake that answers `/v1/hello` correctly for `submit`, then is replaced by an impostor for `poll`: the impostor never receives the token;
 - CAIM: `/v1/hello` without a token answers; a bad nonce is 400; every other route still needs the token;
 - CAIM: `health_probe` against a stranger that copies a real CAIM's `/v1/health` body never sends the token.
 

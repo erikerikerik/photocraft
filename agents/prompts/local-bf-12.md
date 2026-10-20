@@ -14,9 +14,10 @@ Task **BF-12**, in **both repos** (two PRs, branch `ai/bf-12-paths-acl`). Two ha
 
 **Part 2, S3, CAIM `crates/caim/src/endpoint.rs` plus fork `crates/ai-client/src/endpoint.rs`:** on Windows nothing restricts who can read `endpoint.json`, which holds the token. It inherits its folder's ACL, and `CRAFT_AI_ENDPOINT` can move it into a shared folder.
 - CAIM writes the file with an explicit **owner-only DACL**: the current user full control, plus SYSTEM, no inheritance. Use `windows-sys` and `SetSecurityInfo` / `SetNamedSecurityInfoW` on the temp file before the rename. A failure to set it fails the start with a plain sentence; never write the token with a wider ACL.
-- The client checks the opened file's DACL on Windows (`GetSecurityInfo`) and refuses one that grants read to anyone other than the owner, SYSTEM and the Administrators group, with the BF-04-style sentence: "Craft AI Manager's endpoint file can be read by other users, so PhotoCraft won't use it. Restart Craft AI Manager to write a fresh one."
+- The client checks the opened file on Windows (`GetSecurityInfo`): its **owner SID must equal the current process user's SID** (from the process token), and its DACL must grant read to nobody but that user, SYSTEM and the Administrators group. Otherwise it refuses, with the BF-04-style sentence: "Craft AI Manager's endpoint file can be read by other users, so PhotoCraft won't use it. Restart Craft AI Manager to write a fresh one."
 - Keep `CRAFT_AI_ENDPOINT` working: the bug-hunt isolation depends on it.
-- Tests (Windows-only, `#[cfg(windows)]`): CAIM's written file has exactly that DACL; the client refuses a file whose DACL grants `Everyone` or `Users` read, and accepts CAIM's.
+- Tests (Windows-only, `#[cfg(windows)]`): CAIM's written file has exactly that DACL and is owned by the current user; the client refuses a file whose DACL grants `Everyone` or `Users` read, and refuses one whose owner is a different SID (set it in the test where the API allows it; otherwise test the check through a small injectable function that takes the owner SID). It accepts CAIM's own file.
+- **Why the owner matters:** another user who can write into a shared `CRAFT_AI_ENDPOINT` folder could replace the file with their own, locked to themselves, with a token they chose, and so pass BF-06's challenge. The owner check is what stops that.
 
 **Never:** call `icacls` or any shell from the product code; weaken BF-04's Unix check.
 
