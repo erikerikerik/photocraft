@@ -38,9 +38,9 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | MG-11 | CUDA on the 4090 | CUDA on the 4090 with CPU fallback; clean card timings and automatic loading completed in MG-11b | Done | Codex-Strata | CAIM #9, #10 |
 | MG-11b | CUDA libraries load cleanly | Card goldens pass with no manual step; flip cuda = supported | Done | Codex-cloud; Claude approved | CAIM #11 merged, 8572a76a |
 | PC-11 | Model info on layers | Properties shows which model made a layer | Done | Codex-Strata | PR #54 |
-| UI-01 | Manager window design | The calm one-column 1d design | Waiting on you (current widget hold) | Codex-cloud + Erik |  |
-| PC-10 | Open Craft AI Manager button | One button in every AI message | In review (approved prompt; awaits #67 merge) | Codex-Strata; Claude approved prompt | prompts/local-pc-10.md; dependencies done |
-| MG-13 | Manager window | Model list, downloads, licence notes, disk use | Waiting on you (current widget hold) | Codex-Strata | after UI-01 |
+| UI-01 | Manager window design | The calm one-column 1d design | Up next | Codex-cloud + Erik (was Claude) |  |
+| PC-10 | Open Craft AI Manager button | One button in every AI message | Up next (prompt approved) | Codex-Strata | prompts/local-pc-10.md; dependencies done |
+| MG-13 | Manager window | CAIM brief; section 6 deferred | Up next after current work | Codex-Strata | prompts/local-mg-13.md; Erik authorized Oct 19 |
 | BH-02 | M2 bug hunt | Sweep everything M2 added before sign-off | Planned | Claude + Codex-cloud + Codex-Strata |  |
 | PC-12 | M2 sign-off | Your hands-on check on the 4090 | Planned | Codex-Strata + Erik |  |
 
@@ -92,6 +92,6 @@ Erik's roadmap lives in a Claude dashboard (https://claude.ai/artifact/9fBqX7cea
 | MAS | Mac (Apple Silicon) | Starts with the MAS-00 build probe | Planned | Erik + Claude |  |
 | FDY | Our own models (Foundry) | Clean training data, parked | Planned |  | parked |
 
-## Lead status, Oct 19
+Queue update, Oct 19: Erik directly authorized MG-13 against CAIM `agents/CAIM-UI-BRIEF.md`, next after Codex-Strata's current work. Section 6 stays deferred. Older UI hold wording does not block this scoped task.
 
-UP-04 fork fix merged in #56 (`a648e13c`); its upstream PR still awaits Erik. This housekeeping task was not one of the dashboard's 57 rows, and adds no dashboard row. MG-11b is now done, bringing the count to 27/57. #65 and #66 are merged. MG-11b merged in CAIM #11 after Claude approval. Claude approved PC-10's prompt; implementation waits for #67 to merge. UP-05 and UP-06 remain Codex-Strata's queue. Current session instructions hold UI-01/MG-13 widgets; historical D19 text does not release them.
+PC-10 update, Oct 20: Claude approved `agents/prompts/local-pc-10.md`; it is ready for Codex-Strata after the active MG-13/#68 work and after #67 merges.

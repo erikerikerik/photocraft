@@ -1,12 +1,12 @@
 # Prompt for Codex-Strata: PC-10 (Open Craft AI Manager)
 
-**Draft: independent prompt review required before implementation.** Codex-cloud wrote this prompt; Claude or Erik must approve it. Once approved, restore PC-10 to `todo`. UP-05 and UP-06 remain Codex-Strata's queue; do not interrupt a claim.
+**Approved for implementation.** Codex-cloud wrote this prompt; Claude independently approved it in PhotoCraft #67 comment `6274047449`. PC-10 returns to `todo` when #67 merges. Do not interrupt or duplicate Codex-Strata's active MG-13/#68 work.
 
 ---
 
 Task **PC-10** in `agents/TASKS.md`, PhotoCraft only. Implement SPEC amendment 18's existing on-demand launch contract and FEATURES B04/U11. Read `AGENTS.md`, SPEC amendments 11, 18, 21, 23, 25 and 26, the current HANDOFF, `docs/architecture.md`, `docs/development.md`, `docs/control-protocol.md`, PC-09's receipt, and the CAIM MG-12 receipt and `app.json` writer/`caim open` implementation. Read the existing native startup/provider injection, `crates/ai-client/src/endpoint.rs`, the UI's immediate and background command-error paths, and platform-service callbacks before choosing the smallest seam.
 
-Use a separate worktree and branch `ai/pc-10-open-manager`, with `CARGO_TARGET_DIR=target/agent-local`. Check for an existing PC-10 PR first. No new dependencies without the existing SPEC justification. Do not build a CAIM window or release UI-01/MG-13, SAM or ComfyUI holds.
+Use a separate worktree and branch `ai/pc-10-open-manager`, with `CARGO_TARGET_DIR=target/agent-local`. Check for an existing PC-10 PR first. No new dependencies without the existing SPEC justification. Do not alter MG-13, SAM or ComfyUI scope.
 
 **Do:**
 

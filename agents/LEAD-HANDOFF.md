@@ -70,7 +70,7 @@ Always name an agent exactly (Codex-Strata or Codex-cloud): Erik asked for this.
 
 ## 5. Lead routine
 
-Codex-cloud uses `agents/prompts/cloud-lead-autopilot.md` for each bounded lead run, incorporating the local takeover autopilot. Check current PR evidence first: #56/#65/#66 are now merged; MG-11b is CAIM #11 awaiting Claude. PC-10 has a draft prompt awaiting independent review. The current session widget hold remains active. This file's earlier state is a historical snapshot.
+Codex-cloud uses `agents/prompts/cloud-lead-autopilot.md` for each bounded lead run, incorporating the local takeover autopilot. Check current PR evidence rather than relying on this historical snapshot. MG-11b is merged as CAIM `8572a76a`; Erik directly authorized MG-13 against `agents/CAIM-UI-BRIEF.md` with section 6 deferred; Claude independently approved the PC-10 prompt in #67 comment `6274047449`. SAM and ComfyUI remain held.
 
 ### How Claude ran the lead job (keep what works)
 

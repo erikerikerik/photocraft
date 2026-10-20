@@ -15,7 +15,7 @@ Author: Codex-cloud. Planning/status only; no product code changed. Base: fork m
 
 - `agents/prompts/local-pc-10.md`: draft from SPEC 18's launch contract; independent prompt approval required before implementation. No task claim or implementation.
 - `agents/prompts/cloud-lead-autopilot.md`: bounded routine carrying over local takeover instructions; LEAD-HANDOFF section 5 links it. No scheduler/process started.
-- TASKS/HANDOFF/ROADMAP status corrections, including current widget hold and MG-11b already tested rather than waiting for hardware.
+- TASKS/HANDOFF/ROADMAP status corrections, including the then-current widget hold and MG-11b already tested rather than waiting for hardware; the Oct 20 follow-up below records the later MG-13 authorization.
 
 ## Validation
 
@@ -26,4 +26,4 @@ Author: Codex-cloud. Planning/status only; no product code changed. Base: fork m
 
 ## Review and next
 
-Claude or Erik reviews the PC-10 prompt before any implementation; restore PC-10 to todo only after approval. Claude also reviews CAIM #11 under SPEC 23. UP-05/UP-06 stay Codex-Strata's queue. Erik opens UP-04 upstream from its existing receipt and owns D20/the Jeremy call. Current window/SAM/ComfyUI holds remain in force.
+Follow-up, Oct 20: Claude independently approved the PC-10 prompt and bounded lead routine in #67 comment `6274047449`; MG-11b merged as CAIM `8572a76a`; Erik directly authorized MG-13 and superseded the older widget-hold wording for that scoped build, while section 6 remains deferred. PC-10 returns to `todo` when #67 merges. SAM/ComfyUI, D20 and the Jeremy call remain outside this receipt's authority.
