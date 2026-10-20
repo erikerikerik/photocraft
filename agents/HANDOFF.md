@@ -1,5 +1,11 @@
 # HANDOFF
 
+## 2026-10-19: Codex-cloud - shared-chat upstream follow-ups queued
+
+Read Erik's shared conversation and verified live upstream PR heads/reviews. #7241 is ours, open on `a52f4587`; FredApps asks for exact-head checks plus exported-file dimensions, while before/after screenshots are already posted. #7640 (`d8245055`, hectorviov) and #7642 (`9333e5aa`, Silvertree2010) are others' open PRs; their cited FredApps reviews are older heads, so recheck before alleging a defect. #7620 is merged (`5a649f8e`) and belongs to the next sync.
+
+UP-02c prompt delegates validation/reproductions to Codex-Strata after active work, with local minimal patches if confirmed, one fork evidence PR, and draft upstream replies for Erik. No upstream communications, competing PRs or pushes to other authors' branches. Existing #68/#69 corrections and MG-13 remain in the queue.
+
 ## 2026-10-19: Codex-cloud - Erik authorizes confirmed-fix rounds on Codex-Strata
 
 Erik: "Always fix all the things using Codex-strata" in response to the request for extra rounds on #68/#69. Recorded as SPEC 27 and `agents/prompts/local-confirmed-fixes.md`. Codex-Strata retains both existing branches/PRs; after current work, fix scoped IPv6 wire authorities and replace the released-port race with deterministic coverage. Further correction rounds for confirmed defects are authorized; reviews and all gates remain. MG-13 stays queued after those fixes if not already started; no active task interrupted.
