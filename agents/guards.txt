@@ -31,3 +31,8 @@ PC-08 | photocraft | cargo test -p photocraft-engine --lib ai_segment
 # PC-11 the record an AI layer carries (amendment 18, B16): the module and its format round trip,
 # the two commands that write it, and the Properties block that shows it.
 PC-11 | photocraft | cargo test -p photocraft-engine --lib ai_provenance && cargo test -p photocraft-engine --lib generative && cargo test -p photocraft-ui-egui --lib ai_props
+
+# PC-10 opening the Craft AI Manager the machine has registered (amendment 18): the registration is
+# read before anything is started, the command is that executable with one literal `open`, and each
+# failure state gets its own sentence - and a button only where starting the manager can help.
+PC-10 | photocraft | cargo test -p photocraft-ai-client && cargo test -p photocraft-ui-egui --lib caim

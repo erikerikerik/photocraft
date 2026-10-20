@@ -3915,3 +3915,10 @@ curves	Smooth	Згладити
 	Made with	Створено за допомогою
 	SHA-256	SHA-256
 	Device	Пристрій
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Відкрити Craft AI Manager
+	Craft AI Manager isn't running.	Craft AI Manager не запущено.
+	Craft AI Manager isn't installed.	Craft AI Manager не встановлено.
+	Craft AI Manager is starting	Craft AI Manager запускається
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Повторіть ШІ-команду, коли він буде готовий. Запуск менеджера не встановлює модель.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft не зміг запустити Craft AI Manager.

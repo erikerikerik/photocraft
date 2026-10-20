@@ -3915,3 +3915,10 @@ curves	Smooth	Εξομάλυνση
 	Made with	Δημιουργήθηκε με
 	SHA-256	SHA-256
 	Device	Συσκευή
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Άνοιγμα Craft AI Manager
+	Craft AI Manager isn't running.	Ο Craft AI Manager δεν εκτελείται.
+	Craft AI Manager isn't installed.	Ο Craft AI Manager δεν είναι εγκατεστημένος.
+	Craft AI Manager is starting	Ο Craft AI Manager εκκινεί
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Δοκιμάστε ξανά την εντολή AI όταν είναι έτοιμη. Η εκκίνηση του διαχειριστή δεν εγκαθιστά κάποιο μοντέλο.
+	PhotoCraft could not start Craft AI Manager.	Το PhotoCraft δεν μπόρεσε να εκκινήσει τον Craft AI Manager.
