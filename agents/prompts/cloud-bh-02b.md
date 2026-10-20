@@ -4,7 +4,8 @@ Task **BH-02b** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews
 
 **Part 1: independent read (cloud task, no GPU).** Read every line M2 added in both repos, using the scope list in §1:
 - `crates/engine` AI parts, `crates/ai-client` and the UI wiring for PC-08/09/10/11 in the fork;
-- `crates/caim` for MG-10, MG-11 and MG-12 in CAIM.
+- `crates/caim` for MG-10, MG-11 and MG-12 in CAIM;
+- our upstream fixes as merged in the fork (UP-02: `apps/photocraft/src/portal_save.rs`, `apps/photocraft/src/single_instance.rs` and its `main.rs` hookup, `crates/ui-egui/src/export_dialog.rs`; UP-04/05/06: `crates/ipp/src/lib.rs` and `crates/ipp/src/tests.rs`). They have upstream review too, so a lighter pass, but they are in scope and nobody else reads them whole.
 
 **Skip MG-11b's own diff (CAIM #11)**: you wrote it, and Claude has reviewed it. Read with the SPEC 20 scope in mind:
 - protocol edge cases on both sides of the wire, including M1-era peers;
