@@ -6,13 +6,17 @@ Codex-Strata independently approved `agents/prompts/local-up-02c.md` at `0d95b21
 
 The current-head #7640 pasteboard predicate and #7642 cross-collection ID-precedence concerns are confirmed by failing regressions in isolated worktrees, with local minimal patches prepared; the contributors' branches remain untouched. UP-02's fork PR #29 is merged, so any new fork product code needs a new branch and PR. The owned `upfix/*` branches may receive normal (never forced) updates. No upstream posts, competing PRs or pushes to other authors' branches.
 
+## 2026-10-20: Codex-cloud - PC-10 prompt approved and refreshed onto current main
+
+Claude independently approved `agents/prompts/local-pc-10.md` and the bounded lead routine in #67 comment `6274047449`. Erik's later direct MG-13 authorization supersedes this branch's older widget-hold wording; MG-13 remains active on CAIM #13 and section 6 remains deferred. The normal merge from current `main` preserves the completed UP-06 work and SPEC 27. PC-10 returns to `todo` when this docs PR merges; no PC-10 implementation has started and no active Codex-Strata work was interrupted.
+
 ## 2026-10-20 (01:40 PT): Codex-Strata - SPEC 27 round 2 on UP-06: the released-port race is gone
 
 - **UP-06 / #69 / upstream #7835.** The raced `bind(port 0) -> drop -> connect` case is replaced by deterministic coverage through a private connection seam. Upstream `82a1f54cc` adds `open_tcp(host, port, addr, open)` and calls it from `Endpoint::connect`; the fork cherry-pick `3df908b49` resolves the conflict by keeping UP-04's `connect_tcp` (already the same seam) rather than adding a second helper. Fork head `3df908b49`, with `origin/main` `fb6dbd550` merged as `599ef1c8d`. Receipt: `agents/receipts/UP-06.md`.
 - **What the tests now prove.** `a_refused_connection_is_unreachable_and_keeps_why` injects a `ConnectionRefused` connector for an RFC 5737 address and asserts `Error::Unreachable`, the endpoint name in the message, the surviving reason, and that the connector got the resolved address. The end-to-end "nobody reachable" case uses `printer.invalid` (RFC 2606) instead of a released port. Two mutations (wrong error variant, dropped reason) each fail the test, so it is not a tautology.
 - **Gates:** upstream-base standalone copy 10/0 plus clippy `-D warnings` and fmt; fork ipp 12/0, clippy, fmt, `cargo xtask layers` (32 crates), guards 12 of 12. CI and FreeBSD re-run on the new head (SPEC 21/25); the old #69 FreeBSD runs are stale.
 - **UP-05 round 3 also landed this session** (entry below, and `agents/receipts/UP-05.md`): #68 un-parked at `eb440d7ad`, FreeBSD run 39353359734 dispatched on that head.
-- **Next:** MG-13 (`agents/prompts/local-mg-13.md`, CAIM). PC-10 stays pending prompt approval; UP-03 waits on Erik; D19(c) holds AI-C04 / AI-C07 / CAIM-07; FB-01 and FB-02 unchanged.
+- **Next at that checkpoint:** MG-13 (`agents/prompts/local-mg-13.md`, CAIM). PC-10's prompt is now approved in #67; UP-03 waits on Erik; D19(c) holds AI-C04 / AI-C07 / CAIM-07; FB-01 and FB-02 unchanged.
 
 ## 2026-10-19: Codex-cloud - Erik authorizes confirmed-fix rounds on Codex-Strata
 
@@ -30,7 +34,7 @@ Added `agents/prompts/local-mg-13.md` and updated the local autopilot queue: fin
 - **The port-1 assumption is now measured, not assumed.** Against a listener that accepts once and closes, `printers()` returns `print server reply: sending: An established connection was aborted by the software in your host machine. (os error 10053)` on this Windows box, and `matches!(e, Error::Unreachable(_))` is false - the same event FreeBSD reported as `sending: Broken pipe (os error 32)` in run 39171575189. So the old case could only pass on a machine where nothing held port 1.
 - **FB-02's autopilot step is moot:** PC-09 merged as `df4f3cac` and run 39171575189's logs are gone (`gh run view --log-failed` returns nothing), so there is no failed job to re-run or re-judge. FB-02's done-when is "UP-06 merged", so it now waits on #69 and #7835 rather than sitting at `todo`.
 - **Three-way docs conflict:** #67 (Codex-cloud's lead takeover), #68 (UP-05) and #69 (UP-06) all edit `agents/TASKS.md` and `agents/HANDOFF.md`, so whoever merges second resolves those two files by hand. The code does not collide: #68 and #69 both touch `crates/ipp/src/tests.rs`, at line 320 and line 189.
-- **Queue:** UP-05 and UP-06 are both at the review gate with CI green-or-running on their heads and FreeBSD dispatch held until review. PC-10 stays pending prompt approval, UP-03 waits on Erik, and D19(c) holds AI-C04 / AI-C07 / CAIM-07.
+- **Queue at that checkpoint:** UP-05 and UP-06 were both at the review gate with CI green-or-running on their heads and FreeBSD dispatch held until review. PC-10 was pending prompt approval (now approved in #67), UP-03 waits on Erik, and D19(c) holds AI-C04 / AI-C07 / CAIM-07.
 ## 2026-10-19 (11:15 PT): Claude - lead handed to Codex-cloud (SPEC 26)
 
 - **Erik's call:** Claude is low on weekly usage, so Codex-cloud is the acting lead from now on. Start with `agents/LEAD-HANDOFF.md`: roles, Erik's rules, merge mechanics, the state of every open item, and what's waiting on Erik.

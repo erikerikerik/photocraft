@@ -68,7 +68,11 @@ Always name an agent exactly (Codex-Strata or Codex-cloud): Erik asked for this.
 - FB-02: an ipp flake on FreeBSD, fixed by UP-06.
 - D19 (c) holds AI-C04 (SAM), AI-C07 and CAIM-07 (ComfyUI): don't start them.
 
-## 5. How Claude ran the lead job (keep what works)
+## 5. Lead routine
+
+Codex-cloud uses `agents/prompts/cloud-lead-autopilot.md` for each bounded lead run, incorporating the local takeover autopilot. Check current PR evidence rather than relying on this historical snapshot. MG-11b is merged as CAIM `8572a76a`; Erik directly authorized MG-13 against `agents/CAIM-UI-BRIEF.md` with section 6 deferred; Claude independently approved the PC-10 prompt in #67 comment `6274047449`. SAM and ComfyUI remain held.
+
+### How Claude ran the lead job (keep what works)
 
 - **Every few hours:** open and merged PRs in both repos; newest HANDOFF entries; the nightly FreeBSD run (`freebsd_ok.py`); review parked PRs and Codex-Strata's PRs; merge what's approved and green; keep the queue fed; one short HANDOFF entry when you changed or decided something.
 - **Reviews:** read the non-test code against SPEC and the task's prompt, and skim the tests. Verdict as a PR comment. Two fix rounds max; a third is Erik's call (SPEC 15 and 17).
