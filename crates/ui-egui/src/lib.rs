@@ -39,6 +39,7 @@ pub mod brush_preview;
 pub mod brush_resize;
 pub mod brush_sections;
 pub mod brushes_tab;
+pub mod caim_ui;
 pub(crate) mod cam_preview;
 mod cam_transform;
 mod camera_raw_detail_ui;
@@ -445,6 +446,13 @@ pub type CapsLockFn = Box<dyn FnMut() -> bool>;
 pub type WindowFrameFn = Box<dyn FnMut()>;
 /// The caption buttons' current style ([`Services::caption_style`]).
 pub type CaptionStyleFn = Box<dyn Fn(&egui::Context) -> CaptionStyle>;
+/// Whether Craft AI Manager is installed, running, or missing a model, for the one sentence and
+/// action an AI failure is allowed to carry (PC-10, SPEC amendment 18). `None` where there is no
+/// local manager to ask: the web build, the CLI, and tests.
+pub type CaimStateFn = Box<dyn FnMut(photocraft_engine::ai::AiTask) -> caim_ui::CaimState>;
+/// Start the Craft AI Manager this install registered, with its own `open` command, because the
+/// user pressed the button. Never called on its own, and never on the web (PC-10).
+pub type OpenCaimFn = Box<dyn FnMut() -> Result<(), caim_ui::OpenCaimError>>;
 
 /// Platform services injected by the app binary (file dialogs, codecs), keeping this crate free of
 /// I/O dependencies.
@@ -548,6 +556,11 @@ pub struct Services {
     /// while AppKit's run loop is still going crashes or hangs Touch Bar Macs (#1575, #1458).
     /// Without one, eframe closes the window and the app ends with it.
     pub quit: Option<QuitFn>,
+    /// How far the local Craft AI Manager can be told, read when an AI command fails (PC-10).
+    /// `None` offers no launch button, which is what the web build and the CLI must do.
+    pub caim_state: Option<CaimStateFn>,
+    /// Start the registered manager, only from the button on a notice (PC-10).
+    pub open_caim: Option<OpenCaimFn>,
 }
 
 /// A document histogram being computed off the UI thread: (document, revision, receiver of
@@ -1143,6 +1156,9 @@ impl PhotocraftApp {
         if id == "file.new" && self.ui.pen.is_some() {
             vector_ui::pen_commit(self, false);
         }
+        // PC-10: whether this command needs Craft AI Manager, decided from the command itself
+        // before `params` moves into the runner. Nothing here reads an error message.
+        let ai_task = caim_ui::needed_task(id, &params);
         let r = if id == "actions.play" {
             actions::play(self, &params)
         } else if photocraft_engine::actions_cmds::shell_view_command(id) {
@@ -1213,10 +1229,7 @@ impl PhotocraftApp {
                     self.ui.status_error = false;
                 }
             }
-            Err(e) => {
-                self.ui.status = e.clone();
-                self.ui.status_error = true;
-            }
+            Err(e) => caim_ui::report_failure(self, ai_task, e),
         }
         if suppress_events {
             self.session.edit_prefs(|prefs| prefs.script_events.enabled = true);

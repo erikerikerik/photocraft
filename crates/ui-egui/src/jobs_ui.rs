@@ -168,6 +168,10 @@ pub struct JobsUi {
     pub focus: Option<JobId>,
     /// The job the latest [`run`] started (the control channel waits on it).
     pub(crate) last_started: Option<JobId>,
+    /// Which started jobs needed Craft AI Manager, and for which task (PC-10). Decided when the job
+    /// started, because [`JobEvent`] carries the command but not its parameters, and the classical
+    /// and AI paths of the same command must not be confused.
+    pub(crate) ai_jobs: Vec<(JobId, photocraft_engine::ai::AiTask)>,
 }
 
 /// Run command `id`: in the background when background jobs are on and the command is a job
@@ -177,10 +181,14 @@ pub fn run(app: &mut PhotocraftApp, id: &str, params: Value) -> Result<Value, St
     if !app.background_jobs {
         return app.session.execute(id, params).map_err(|e| e.to_string());
     }
+    let ai_task = crate::caim_ui::needed_task(id, &params);
     match app.session.start(id, params).map_err(|e| e.to_string())? {
         Started::Done(v) => Ok(v),
         Started::Job(job) => {
             app.jobs.last_started = Some(job);
+            if let Some(task) = ai_task {
+                app.jobs.ai_jobs.push((job, task));
+            }
             // The status bar's progress readout names the job; clear any old message.
             app.ui.status.clear();
             app.ui.status_error = false;
@@ -427,6 +435,9 @@ pub fn cancel(app: &mut PhotocraftApp, id: JobId) -> bool {
 }
 
 fn on_event(app: &mut PhotocraftApp, ctx: &egui::Context, e: JobEvent) {
+    // PC-10: did this job need Craft AI Manager? Answered when it started; dropped now either way.
+    let ai_task = app.jobs.ai_jobs.iter().find(|(job, _)| *job == e.id).map(|(_, task)| *task);
+    app.jobs.ai_jobs.retain(|(job, _)| *job != e.id);
     // Preferences ▸ General ▸ Beep When Done (off by default): a finished operation beeps, like
     // Photoshop's cue. Cancelling is the user's own action and stays silent.
     if matches!(e.outcome, JobOutcome::Done(_))
@@ -515,7 +526,7 @@ fn on_event(app: &mut PhotocraftApp, ctx: &egui::Context, e: JobEvent) {
                 app.jobs.close_after_saves = false;
             }
             app.sync_views();
-            notices::error(app, format!("{}: {err}", e.label));
+            crate::caim_ui::report_failure(app, ai_task, &format!("{}: {err}", e.label));
         }
         JobOutcome::Cancelled => {
             app.ui.status = crate::i18n::fmt(tl!("Cancelled {label}"), &[("label", &e.label)]);

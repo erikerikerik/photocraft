@@ -4134,3 +4134,10 @@ cameraRaw	Yellow	Sárga
 	Made with	Készítés eszköze
 	SHA-256	SHA-256
 	Device	Eszköz
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Craft AI Manager megnyitása
+	Craft AI Manager isn't running.	A Craft AI Manager nem fut.
+	Craft AI Manager isn't installed.	A Craft AI Manager nincs telepítve.
+	Craft AI Manager is starting	A Craft AI Manager indul
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Próbálja újra az AI-parancsot, ha elkészült. A manager elindítása nem telepít modellt.
+	PhotoCraft could not start Craft AI Manager.	A PhotoCraft nem tudta elindítani a Craft AI Manager programot.

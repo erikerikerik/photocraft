@@ -3217,3 +3217,10 @@ curves	Smooth	Glätten
 	Made with	Erstellt mit
 	SHA-256	SHA-256
 	Device	Gerät
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Craft AI Manager öffnen
+	Craft AI Manager isn't running.	Craft AI Manager läuft nicht.
+	Craft AI Manager isn't installed.	Craft AI Manager ist nicht installiert.
+	Craft AI Manager is starting	Craft AI Manager startet
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Versuchen Sie den KI-Befehl erneut, wenn er bereit ist. Das Starten des Managers installiert kein Modell.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft konnte Craft AI Manager nicht starten.

@@ -34,6 +34,20 @@ pub struct Notice {
     /// and is reset while the pointer rests on the stack (issue #2022). `None` until first shown.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shown_at: Option<f64>,
+    /// One action button on the card, from a closed set (PC-10). `None` - the usual case - means
+    /// the notice says something and offers nothing, which is what most notices should do.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<NoticeAction>,
+}
+
+/// The actions a notice can offer. A closed set rather than a command string: a notice cannot ask
+/// for something the shell has not wired, and `ui.inspect` shows which one it offered.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum NoticeAction {
+    /// Start the Craft AI Manager this PhotoCraft has registered (SPEC amendment 18). The native
+    /// app owns the seam; where there is none - the web build, the CLI, a test - the button is not
+    /// offered at all.
+    OpenCaim,
 }
 
 impl Notice {
@@ -47,8 +61,27 @@ impl Notice {
 /// Show a notice (newest last); returns its id.
 pub fn post(app: &mut PhotocraftApp, title: impl Into<String>, lines: Vec<String>, error: bool, dismiss_pref: Option<&str>) -> u64 {
     let id = app.ui.alloc_id();
-    app.ui.notices.push(Notice { id, title: title.into(), lines, error, dismiss_pref: dismiss_pref.map(str::to_owned), args: Vec::new(), shown_at: None });
+    app.ui.notices.push(Notice {
+        id,
+        title: title.into(),
+        lines,
+        error,
+        dismiss_pref: dismiss_pref.map(str::to_owned),
+        args: Vec::new(),
+        shown_at: None,
+        action: None,
+    });
     cap_notices(app);
+    id
+}
+
+/// Post a notice that offers one action button (PC-10). Everything else about it is ordinary:
+/// the same stack, the same auto-hide, the same `ui.inspect` view.
+pub fn post_action(app: &mut PhotocraftApp, title: impl Into<String>, lines: Vec<String>, error: bool, action: NoticeAction) -> u64 {
+    let id = post(app, title, lines, error, None);
+    if let Some(notice) = app.ui.notices.iter_mut().find(|notice| notice.id == id) {
+        notice.action = Some(action);
+    }
     id
 }
 
@@ -195,6 +228,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
     let t = crate::theme::Tokens::get(ctx);
     let mut dismiss_id = None;
+    let mut action = None;
     // Clear the status bar (~24 px) and leave the dock's edge some air.
     let area = egui::Area::new(egui::Id::new("photocraft-notices"))
         .order(egui::Order::Foreground)
@@ -228,12 +262,27 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
                             let text = crate::i18n::fmt(tl!("…and {n} more"), &[("n", &(n.lines.len() - MAX_LINES).to_string())]);
                             ui.label(egui::RichText::new(text).color(t.text_faint));
                         }
+                        // One action, when the notice has one (PC-10). The click is collected and
+                        // handled after the card loop, like Dismiss, because the action changes
+                        // notices and the loop is reading them.
+                        if let Some(notice_action) = n.action {
+                            ui.add_space(4.0);
+                            let label = match notice_action {
+                                NoticeAction::OpenCaim => tl!("Open Craft AI Manager"),
+                            };
+                            if ui.button(label).clicked() {
+                                action = Some(notice_action);
+                            }
+                        }
                     });
                 ui.add_space(6.0);
             }
         });
     if let Some(id) = dismiss_id {
         dismiss(app, id);
+    }
+    if let Some(NoticeAction::OpenCaim) = action {
+        crate::caim_ui::open_pressed(app);
     }
     let (auto_hide, duration) = {
         let i = &app.session.prefs().interface;
