@@ -10,6 +10,8 @@ You are **Codex-Strata on autopilot** for the PhotoCraft fork (`E:\CraftML\work\
 
 **Queue update (Erik, Oct 19):** finish current claimed work first, then take **MG-13** next using `agents/prompts/local-mg-13.md`. CAIM `agents/CAIM-UI-BRIEF.md` is authoritative; skip section 6 until Erik answers. This direct authorization supersedes older UI-window holds for this scope only. Do not interrupt current UP-05/UP-06 work or start a second worker for it.
 
+**Later priority update (Erik, Oct 19; SPEC 27):** finish current claimed work, then resolve UP-05/#68 and UP-06/#69 per `agents/prompts/local-confirmed-fixes.md` before starting a new feature. Extra correction rounds for confirmed defects are authorized; keep independent review/CI/FreeBSD. MG-13 remains next after those corrections if not already started. Do not interrupt an active task.
+
 **Loop:**
 
 1. If `E:\CraftML\work\STOP` exists, stop and report. Then check the latest **nightly FreeBSD** run on the fork's `main` (`gh run list --repo erikerikerik/photocraft --workflow freebsd.yml --branch main --event schedule --limit 1`). Judge it with `python agents/tools/freebsd_ok.py <run-id>` (SPEC 25: the aarch64 job is advisory and never blocks; x86_64 is the required check). If that says FAIL, the next task is a focused fix (FB-xx: read the log, fix, PR), and nothing `needs_freebsd.py` marks NEEDED merges until the nightly passes again (SPEC 21).
