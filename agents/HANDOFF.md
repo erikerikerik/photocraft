@@ -1,5 +1,14 @@
 # HANDOFF
 
+## 2026-10-20 (11:20 PT): Claude - BH-02, the M2 bug hunt, has started (Erik)
+
+- **Erik asked for the M2 bug hunt now.** PC-10, UP-05 and UP-06 are merged, and MG-13 (CAIM #13) joins the sweep when it merges. Plan, checklist and findings live in `agents/reviews/2026-10-20-m2-bug-hunt.md`.
+- **Split, because Codex-Strata wrote most of M2 (SPEC 20 independence):**
+  - **BH-02a, Codex-Strata** (`agents/prompts/local-bh-02a.md`): runs attack checklist sections A–G against fresh builds, isolated from Erik's live manager, and reports raw results with no fixes and no severities. **Next in its queue, before UP-02c.**
+  - **BH-02b, Codex-cloud** (`agents/prompts/cloud-bh-02b.md`): independent read of all M2 code, then the GPU section with Strata stopped.
+  - **BH-02c, Claude:** the security read.
+- **Then** Claude triages, and fixes come back to Codex-Strata as BF-xx tasks. PC-12 waits for every P0/P1 fix.
+
 ## 2026-10-20: Codex-cloud - UP-02c prompt approved with factual corrections
 
 Codex-Strata independently approved `agents/prompts/local-up-02c.md` at `0d95b21e`; GitHub records the verdict as comments because draft PR #72 cannot accept a review from its author. The reviewed scope is unchanged, but the live evidence is now explicit: #7241 exact-head fmt, Clippy, dialog tests and real PNG dimensions already pass; #7240 still needs its missing-`current_filter` integration regression and Linux/live-desktop evidence is unavailable here; #7242's real two-launch check cannot be isolated without touching the user's actual profile and remains an Erik/maintainer manual item. WSL enumeration is permission-denied (`E_ACCESSDENIED`), not proof that no distro exists.
