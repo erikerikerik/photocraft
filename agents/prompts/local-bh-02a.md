@@ -2,7 +2,16 @@
 
 Task **BH-02a** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews/2026-10-20-m2-bug-hunt.md` (read all of it first). Rules: SPEC amendments 20, 21, 25 and 26. Erik asked for this on Oct 20.
 
-**Your role is the runner, not the judge.** You wrote most of M2, so in this task you **don't fix, don't rate severity, and don't decide that something is fine by design**. Run each checklist item in sections **A–G**, record what actually happened, and give a minimal repro for anything that differs from "expected". Section H is Codex-cloud's (it needs the card free, and you run on Strata). Claude triages afterwards, and the fixes come back to you as BF-xx tasks.
+**Your role: runner and independent reviewer (D22, Erik, Oct 20).** Most of M2 was written by Codex-Strata running an earlier Strata model. You run on a **different model** (Erik switched Strata to `qwen3.8-flash-next-unsloth-ud-q5_k_xl` on Oct 20), which counts as an independent reviewer under D22, on these conditions:
+- **Record the model.** The receipt's first line names the model and Strata version you ran on. If Strata is running anything else, stop and say so.
+- **Form your view before reading the authors' claims.** For the code under review, read SPEC amendments 11, 18 and 20, the task prompts in `agents/prompts/` and the code itself, and write down your findings **before** you open that code's receipts or HANDOFF entries. Only then read the receipts, to check whether a finding is already known or deliberately accepted. Note which, rather than dropping the finding.
+- **Don't fix in this task.** Fixes come back as BF-xx tasks after Claude triages, so finding and fixing stay separate steps.
+
+You do two things:
+1. **Run** checklist sections **A–G** against real builds and record what actually happened.
+2. **Read** the M2 scope in §1 of the review file, both repos, except MG-11b, and add any finding the checklist didn't cover.
+
+For every finding, **propose** a severity (P0–P3, as defined in the review file); Claude makes the final call. Section H is Codex-cloud's (it needs the card free, and you run on Strata).
 
 **Setup:**
 - Fresh worktrees from `origin/main` of both repos: `wt/bh-02a-photocraft` and `wt/bh-02a-caim`, with `CARGO_TARGET_DIR=target/agent-bh-02a`.
@@ -17,10 +26,10 @@ Task **BH-02a** in `agents/TASKS.md`. Plan, scope and checklist: `agents/reviews
 
 **Do:** sections A to G, in order. Use the GUI only where an item needs it (PC-10's click, C3's document modes when the CLI or control channel can't reach them); prefer `photocraft-cli` and the JSON control channel. For G, do every break in a throwaway worktree (`wt/bh-02a-mutants`) and never commit, push or open a PR from it. List each guard, the one-line break you made, and red/green.
 
-**Record** every item as one row in a new receipt `agents/receipts/BH-02a.md`: item id, command or steps, expected, actual, PASS/DIFF, log path. For each DIFF, put a minimal repro in its own subsection. Then copy each DIFF as a row into §3 of `agents/reviews/2026-10-20-m2-bug-hunt.md`: part `BH-02a`, severity **blank**, status `new`.
+**Record** every item as one row in a new receipt `agents/receipts/BH-02a.md`: item id, command or steps, expected, actual, PASS/DIFF, log path. For each DIFF, put a minimal repro in its own subsection. Then copy each DIFF, and each finding from your read, as a row into §3 of `agents/reviews/2026-10-20-m2-bug-hunt.md`: part `BH-02a`, severity = your proposal marked "(proposed)", file:line, repro or "by reading", status `new`. Add your "Checked and correct" list under §3, as in M1.
 
 **Never:**
-- change product code;
+- change product code (no fixes in this task, D22);
 - open fix PRs during this task;
 - touch Erik's live manager, its files or the card;
 - print or store the token;
