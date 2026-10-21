@@ -239,7 +239,7 @@ These refine "PhotoCraft fork: what changes". Where this section and the text ab
 13. **Candidate models, revised (Oct 14, from RedLamp's licence research; details in `agents/RESEARCH.md`).** The rule now covers **training data**, not just code and weights: a model whose weights are permissive but whose training data is non-commercial or research-only is not "commercial-safe".
     | Task | Candidate | Status |
     |---|---|---|
-    | Fill masked area | LaMa (big-lama) ONNX | **Accepted for M1 and personal use only** (D2): trained on Places2 (non-commercial). Needs a clean replacement before any public CAIM release (D7). |
+    | Fill masked area | LaMa (big-lama) ONNX | **Accepted for M1, non-commercial use only** (D2): trained on Places365, not Places2 - corrected Oct 20, 2026 (`agents/models/lama.md` says Places365, and Erik's approved disclosure says "not for paid or client jobs" rather than "personal use only"). Needs a clean replacement before any public CAIM release (D7). |
     | Select subject / object | **SAM 2.1** (Apache-2.0) | First choice. MobileSAM dropped (licence unclear). |
     | Remove background | BiRefNet | Verify the specific checkpoint's training data. RMBG excluded. |
     | Upscale | none clean yet | Real-ESRGAN removed (DIV2K research-only data). |

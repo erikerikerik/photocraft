@@ -28,7 +28,7 @@ Open-source RAW editor for Apple Silicon (Swift + Metal), **MPL-2.0**, pre-alpha
 
 | Our plan | RedLamp's finding | What we changed |
 |---|---|---|
-| LaMa (big-lama) for M1 fill | Pretrained Big-LaMa: **Avoid** (Places2 is non-commercial); plans its own LaMa trained on owned data | D2 tightened: LaMa stays for M1 and personal use, but CAIM shows the training-data note and asks for one acknowledgment before downloading; replacing it is a task before any public CAIM release (D7) |
+| LaMa (big-lama) for M1 fill | Pretrained Big-LaMa: **Avoid** (Places2 is non-commercial); plans its own LaMa trained on owned data | D2 tightened: LaMa stays for M1 and personal use, but CAIM shows the training-data note and asks for one acknowledgment before downloading; replacing it is a task before any public CAIM release (D7). **Oct 20, 2026:** the dataset is Places365, not Places2 (`agents/models/lama.md`); the "avoid" verdict stands either way, and the user-facing wording is now "not for paid or client jobs" |
 | MobileSAM / SAM2 for Select Subject | SAM 2.1 Apache-2.0 **adopt**; MobileSAM licence **unclear** | Candidate list: SAM 2.1 first, MobileSAM dropped |
 | Real-ESRGAN for upscale | **Rejected**: DIV2K training data is research-only, and it paints over texture | Removed from candidates; upscale has no clean candidate yet |
 | BiRefNet for Remove Background | Not evaluated there; BRIA RMBG avoid | Still "verify the checkpoint's data" |
