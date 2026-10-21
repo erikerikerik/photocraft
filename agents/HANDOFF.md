@@ -1,5 +1,24 @@
 # HANDOFF
 
+## 2026-10-20 (18:35 PT): Claude - Erik: security fixes, then done
+
+- **Erik, 18:31: "we're just fixing security holes and calling it done."** Autopilot does BF-06, BF-12, BF-09, BF-08 and BF-07, then stops for good.
+- **Dropped:** BF-05 (B1: AI Select Subject / Remove Background refused on images over ~1 MP; **known open P1 bug**, not security), BF-10, BF-11.
+- **Held:** BH-02a, UP-02c, MG-13 and the weekly upstream sync. M2 is not signed off (PC-12).
+- The open upstream PRs (#7240, #7241, #7242, #7831, #7835) stay as they are; nobody follows them up.
+
+## 2026-10-20 (14:00 PT): Claude - BH-02b part 1 triaged; Erik: fix all of it
+
+- All eight of Codex-cloud's findings are real; B2 = S1. Final severities: **P1** B1 (mask jobs over 1 MP are refused by CAIM, so AI Select Subject and Remove Background fail on real photos) and S1/B2; **P2** B3, B5, B6, B7, B8, S2, S3; **P3** B4.
+- **Erik, Oct 20, 13:58: "Fix all the things"**, with Codex-Strata. Fix tasks **BF-05..BF-12** are in TASKS; prompts follow, BF-05 first. D23 (the protocol change for S1) is decided yes.
+- Local reviewers: Devstral 24B failed the M1 calibration and gpt-oss:120b produced nothing usable, so BH-02d stays unstarted.
+
+## 2026-10-20: Codex-cloud - BH-02b part 1 findings parked for Claude
+
+- **Done:** independently read the M2 scope in both repos before opening the existing §3 findings, excluding Codex-cloud's own MG-11b diff as required. Added B1-B8 with quoted code, file/line evidence, triggers and reading repros; B2 is retained and marked as the independently found duplicate of S1. Rechecked the M1 fixes and the lighter UP-02/04/05/06 scope. No product code or tests were changed.
+- **Not done:** GPU section H is deliberately deferred to part 2; MG-13 is not merged, so its code-read addendum and the H rerun are also outstanding. No fresh release build, GPU run, guard mutation, upstream post or fix was attempted in this code-read part.
+- **Next:** Claude triages B1-B8 and assigns final severities / BF tasks. When Erik schedules part 2, stop Strata, use isolated `CRAFT_AI_ENDPOINT` and `CRAFT_AI_MODELS`, run H1-H3, and record VRAM/RAM timestamps. After CAIM #13 merges, read its diff and repeat H. **PARKED: needs Claude.**
+
 ## 2026-10-20 (11:20 PT): Claude - BH-02, the M2 bug hunt, has started (Erik)
 
 - **Erik asked for the M2 bug hunt now.** PC-10, UP-05 and UP-06 are merged, and MG-13 (CAIM #13) joins the sweep when it merges. Plan, checklist and findings live in `agents/reviews/2026-10-20-m2-bug-hunt.md`.
