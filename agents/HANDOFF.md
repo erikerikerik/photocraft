@@ -1,5 +1,12 @@
 # HANDOFF
 
+## 2026-10-20 (18:35 PT): Claude - Erik: security fixes, then done
+
+- **Erik, 18:31: "we're just fixing security holes and calling it done."** Autopilot does BF-06, BF-12, BF-09, BF-08 and BF-07, then stops for good.
+- **Dropped:** BF-05 (B1: AI Select Subject / Remove Background refused on images over ~1 MP; **known open P1 bug**, not security), BF-10, BF-11.
+- **Held:** BH-02a, UP-02c, MG-13 and the weekly upstream sync. M2 is not signed off (PC-12).
+- The open upstream PRs (#7240, #7241, #7242, #7831, #7835) stay as they are; nobody follows them up.
+
 ## 2026-10-20 (14:00 PT): Claude - BH-02b part 1 triaged; Erik: fix all of it
 
 - All eight of Codex-cloud's findings are real; B2 = S1. Final severities: **P1** B1 (mask jobs over 1 MP are refused by CAIM, so AI Select Subject and Remove Background fail on real photos) and S1/B2; **P2** B3, B5, B6, B7, B8, S2, S3; **P3** B4.
