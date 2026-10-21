@@ -4288,3 +4288,10 @@ shape	Appearance	Izgled
 	Made with	Napravljeno pomoću
 	SHA-256	SHA-256
 	Device	Uređaj
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Otvori Craft AI Manager
+	Craft AI Manager isn't running.	Craft AI Manager se ne izvršava.
+	Craft AI Manager isn't installed.	Craft AI Manager nije instaliran.
+	Craft AI Manager is starting	Craft AI Manager se pokreće
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Kada bude spreman, pokušajte AI komandu ponovo. Pokretanje menadžera ne instalira model.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft nije mogao da pokrene Craft AI Manager.

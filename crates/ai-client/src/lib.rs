@@ -12,14 +12,25 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+mod app_file;
 mod endpoint;
 mod http;
 mod pixels;
 mod protocol;
 mod provider;
 
+pub use app_file::{
+    APP_FILE_NAME, APP_VERSION, ManagerState, Registration, RegistrationError, app_file_from_env, default_app_file, manager_state, read_registration,
+};
 pub use endpoint::{ENDPOINT_ENV, ENDPOINT_VERSION, Endpoint, default_endpoint_file, endpoint_file_from_env};
 pub use provider::CaimProvider;
+
+// Starting a process belongs to the native app: the web build has no local manager to start, and
+// the CLI never starts one either (PC-10).
+#[cfg(not(target_arch = "wasm32"))]
+mod launch;
+#[cfg(not(target_arch = "wasm32"))]
+pub use launch::{LaunchError, open_registered};
 
 #[cfg(test)]
 mod fake_server;

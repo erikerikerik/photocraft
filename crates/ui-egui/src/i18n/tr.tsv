@@ -3945,3 +3945,10 @@ cameraData	Lens	Lens
 	Made with	Oluşturulma aracı
 	SHA-256	SHA-256
 	Device	Cihaz
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Craft AI Manager'ı Aç
+	Craft AI Manager isn't running.	Craft AI Manager çalışmıyor.
+	Craft AI Manager isn't installed.	Craft AI Manager yüklü değil.
+	Craft AI Manager is starting	Craft AI Manager başlatılıyor
+	Try the AI command again once it is ready. Starting the manager does not install a model.	Hazır olduğunda AI komutunu yeniden deneyin. Yöneticiyi başlatmak model yüklemez.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft, Craft AI Manager'ı başlatamadı.

@@ -3394,3 +3394,10 @@ curves	Smooth	매끄럽게
 	Made with	생성에 사용
 	SHA-256	SHA-256
 	Device	장치
+# PC-10: the one sentence and the one action an AI command gets when Craft AI Manager is missing (amendment 18)
+	Open Craft AI Manager	Craft AI Manager 열기
+	Craft AI Manager isn't running.	Craft AI Manager가 실행 중이 아닙니다.
+	Craft AI Manager isn't installed.	Craft AI Manager가 설치되어 있지 않습니다.
+	Craft AI Manager is starting	Craft AI Manager를 시작하는 중
+	Try the AI command again once it is ready. Starting the manager does not install a model.	준비가 되면 AI 명령을 다시 시도하세요. 관리자를 시작해도 모델이 설치되지 않습니다.
+	PhotoCraft could not start Craft AI Manager.	PhotoCraft가 Craft AI Manager를 시작할 수 없습니다.
